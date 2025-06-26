@@ -22,11 +22,8 @@ const REVIEWS_PER_PAGE = 10;
 
 document.addEventListener("DOMContentLoaded", function() {
   console.log('DOM 로드 완료');
-  
-  setTimeout(() => {
-    initializeStarRating();
-    initializeOtherFeatures();
-  }, 200);
+  initializeStarRating();
+  initializeOtherFeatures();
 });
 
 function initializeStarRating() {
@@ -41,27 +38,37 @@ function initializeStarRating() {
     return;
   }
   
-  starRating.innerHTML = '';
-  for (let i = 1; i <= 5; i++) {
-    const star = document.createElement('span');
-    star.className = 'star';
-    star.setAttribute('data-rating', i);
-    star.setAttribute('tabindex', '0');
-    star.textContent = '⭐';
-    star.style.cursor = 'pointer';
-    star.style.fontSize = '2rem';
-    star.style.opacity = '0.3';
-    star.style.transition = 'all 0.2s ease';
-    star.style.userSelect = 'none';
-    star.style.display = 'inline-block';
-    star.style.padding = '0.2rem';
-    starRating.appendChild(star);
-  }
+  // 별점 HTML 생성...
+  starRating.innerHTML = `
+    <span class="star" data-rating="1">⭐</span>
+    <span class="star" data-rating="2">⭐</span>
+    <span class="star" data-rating="3">⭐</span>
+    <span class="star" data-rating="4">⭐</span>
+    <span class="star" data-rating="5">⭐</span>
+  `;
+  
+  // CSS 스타일 직접 적용한다
+  starRating.style.display = 'flex';
+  starRating.style.gap = '0.3rem';
+  starRating.style.margin = '1rem 0';
+  starRating.style.justifyContent = 'center';
+  starRating.style.alignItems = 'center';
   
   const stars = starRating.querySelectorAll('.star');
   console.log('생성된 별 개수:', stars.length);
   
+  // 각 별에 스타일, 이벤트 적용 안되면 죽는다
   stars.forEach(function(star, index) {
+    star.style.fontSize = '2rem';
+    star.style.cursor = 'pointer';
+    star.style.userSelect = 'none';
+    star.style.transition = 'all 0.2s ease';
+    star.style.opacity = '0.3';
+    star.style.transform = 'scale(1)';
+    star.style.display = 'inline-block';
+    star.style.padding = '0.2rem';
+    star.style.tabIndex = '0';
+    
     const rating = parseInt(star.getAttribute('data-rating'));
     
     function selectStar() {
@@ -74,13 +81,6 @@ function initializeStarRating() {
     
     star.addEventListener('click', function(e) {
       e.preventDefault();
-      e.stopPropagation();
-      selectStar();
-    });
-
-    star.addEventListener('touchend', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
       selectStar();
     });
     
@@ -277,8 +277,10 @@ async function handleReviewSubmit() {
     console.log('문서 저장 완료:', docRef.id);
     alert("후기가 등록되었습니다! 감사합니다 💖");
 
+    // 폼 초기화
     resetForm();
     
+    // 리뷰 목록 새로고침
     lastVisible = null;
     const reviewsContainer = document.getElementById("reviews-container");
     const sortSelect = document.getElementById("review-sort");
@@ -295,7 +297,6 @@ async function handleReviewSubmit() {
 }
 
 function resetForm() {
-
   const reviewForm = document.getElementById("review-form");
   if (reviewForm) reviewForm.reset();
   
