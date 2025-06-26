@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>예약하기 - NEKORUNAIL</title>
+  <link rel="stylesheet" href="style.css" />
+  <script defer src="booking.js"></script>
+  <script type="module">
+    import { db, storage } from './firebase.js';
+  </script>
+  <style>
+    .booking-hero {
+      color: rgb(0, 0, 0);
+      padding: 4rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .booking-hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="3" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+      animation: float 20s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+    
+    .booking-hero h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 1;
+    }
+    
+    .booking-hero p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .booking-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+    
+    .booking-form-wrapper {
+      background: white;
+      border-radius: 25px;
+      padding: 3rem;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .booking-form-wrapper::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #ff69b4, #ff1493, #ff69b4);
+    }
+    
+    .form-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    
+    .form-header h2 {
+      color: #333;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .form-header p {
+      color: #666;
+      font-size: 1.1rem;
+    }
+    
+    .form-group {
+      margin-bottom: 2rem;
+      position: relative;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 0.8rem;
+      color: #333;
+      font-weight: 600;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .label-icon {
+      font-size: 1.2rem;
+      color: hotpink;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 1.2rem;
+      border: 2px solid #e1e5e9;
+      border-radius: 15px;
+      font-size: 1rem;
+      font-family: 'MaruBuri', sans-serif;
+      transition: all 0.3s ease;
+      background: #fafbfc;
+      box-sizing: border-box;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: hotpink;
+      background: white;
+      box-shadow: 0 0 0 4px rgba(255, 105, 180, 0.1);
+      transform: translateY(-2px);
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+      min-height: 120px;
+      line-height: 1.6;
+    }
+    
+    .service-selection {
+      margin-bottom: 2rem;
+    }
+    
+    .service-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .service-option {
+      position: relative;
+    }
+    
+    .service-option input[type="checkbox"] {
+      display: none;
+    }
+    
+    .service-option label {
+      display: block;
+      padding: 1.2rem;
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      font-weight: 500;
+    }
+    
+    .service-option input[type="checkbox"]:checked + label {
+      background: linear-gradient(135deg, #ff69b4, #ff1493);
+      color: white;
+      border-color: hotpink;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(255, 105, 180, 0.3);
+    }
+    
+    .service-option label:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .service-price {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-top: 0.5rem;
+    }
+    
+    .time-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+    
+    .time-option {
+      position: relative;
+    }
+    
+    .time-option input[type="radio"] {
+      display: none;
+    }
+    
+    .time-option label {
+      display: block;
+      padding: 1rem;
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      font-weight: 500;
+    }
+    
+    .time-option input[type="radio"]:checked + label {
+      background: hotpink;
+      color: white;
+      border-color: hotpink;
+      transform: scale(1.05);
+    }
+    
+    .time-option label:hover {
+      background: #e9ecef;
+    }
+    
+    .special-requests {
+      background: linear-gradient(135deg, #ffe1fd, #ffb3f5);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin: 2rem 0;
+      border-left: 4px solid #fd61eb;
+    }
+    
+    .special-requests h4 {
+      color: #f500e1;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .submit-section {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 2px dashed #e9ecef;
+    }
+    
+    .submit-btn {
+      background: linear-gradient(135deg, #ff69b4, #ff1493);
+      color: white;
+      border: none;
+      padding: 1.5rem 3rem;
+      border-radius: 50px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 20px rgba(255, 105, 180, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.8rem;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    .submit-btn:hover::before {
+      left: 100%;
+    }
+    
+    .submit-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(255, 105, 180, 0.5);
+    }
+    
+    .submit-btn:active {
+      transform: translateY(-1px);
+    }
+    
+    .loading-spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .info-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin: 3rem 0;
+    }
+    
+    .info-card {
+      background: white;
+      border-radius: 18px;
+      padding: 2rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      transition: all 0.3s ease;
+      border-left: 4px solid hotpink;
+    }
+    
+    .info-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    }
+    
+    .info-card-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    
+    .info-card h3 {
+      color: #333;
+      margin-bottom: 1rem;
+    }
+    
+    .info-card p {
+      color: #666;
+      line-height: 1.6;
+    }
+    
+    @media (max-width: 768px) {
+      .booking-hero h1 {
+        font-size: 2.5rem;
+      }
+      
+      .booking-container {
+        padding: 2rem 1rem;
+      }
+      
+      .booking-form-wrapper {
+        padding: 2rem;
+      }
+      
+      .service-options {
+        grid-template-columns: 1fr;
+      }
+      
+      .time-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      
+      .submit-btn {
+        width: 100%;
+        max-width: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <nav>
+      <ul>
+        <li><a href="index.html">홈</a></li>
+        <li><a href="gallery.html">갤러리</a></li>
+        <li><a href="booking.html">예약</a></li>
+        <li><a href="review.html">리뷰 남기기</a></li>
+        <li><a href="come.html">찾아오시는 길</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="booking-hero">
+    <h1>📅 예약하기</h1>
+    <p>원하시는 날짜와 시간을 선택하여 예약해주세요</p>
+  </section>
+
+  <div class="booking-container">
+    <div class="info-cards">
+      <div class="info-card">
+        <div class="info-card-icon">⏰</div>
+        <h3>운영시간</h3>
+        <p>월-토: 10:00-22:00<br>일요일: 11:00-20:00<br>점심시간: 13:00-14:00</p>
+      </div>
+      <div class="info-card">
+        <div class="info-card-icon">💎</div>
+        <h3>예약 안내</h3>
+        <p>시술 항목 당일 변경 불가능<br>아트 변동 있으실 경우 최소 이틀 전 연락 부탁드립니다.<br>노쇼 시 패널티 있음</p>
+      </div>
+    </div>
+
+    <div class="booking-form-wrapper">
+      <div class="form-header">
+        <h2>✨ 예약 정보 입력</h2>
+        <p>정확한 정보를 입력해주시면 더 나은 서비스를 제공해드릴 수 있습니다</p>
+      </div>
+
+      <form id="reserve-form">
+        <div class="form-group">
+          <label for="name">
+            <span class="label-icon">👤</span>
+            이름
+          </label>
+          <input type="text" id="name" required placeholder="이름을 입력해주세요" />
+        </div>
+
+        <div class="form-group">
+          <label for="phone">
+            <span class="label-icon">📞</span>
+            연락처
+          </label>
+          <input type="tel" id="phone" required placeholder="010-1234-5678" pattern="[0-9]{3}-[0-9]{4}-[0-9]{4}" />
+        </div>
+
+        <div class="form-group">
+          <label for="date">
+            <span class="label-icon">📅</span>
+            예약 날짜
+          </label>
+          <input type="date" id="date" required />
+        </div>
+
+        <div class="form-group">
+          <label>
+            <span class="label-icon">🕐</span>
+            예약 시간
+          </label>
+          <div class="time-grid" id="time-selection">
+            <div class="time-option">
+              <input type="radio" id="time-12" name="time" value="12:00" />
+              <label for="time-12">12:00</label>
+            </div>
+            <div class="time-option">
+              <input type="radio" id="time-14" name="time" value="14:00" />
+              <label for="time-14">14:00</label>
+            </div>
+            <div class="time-option">
+              <input type="radio" id="time-15" name="time" value="15:00" />
+              <label for="time-15">15:00</label>
+            </div>
+            <div class="time-option">
+              <input type="radio" id="time-16" name="time" value="16:00" />
+              <label for="time-16">16:00</label>
+            </div>
+            <div class="time-option">
+              <input type="radio" id="time-17" name="time" value="17:00" />
+              <label for="time-17">17:00</label>
+            </div>
+            <div class="time-option">
+              <input type="radio" id="time-18" name="time" value="18:00" />
+              <label for="time-18">18:00</label>
+            </div>
+            <div class="time-option">
+              <input type="radio" id="time-19" name="time" value="19:00" />
+              <label for="time-19">19:00</label>
+            </div>
+            <div class="time-option">
+              <input type="radio" id="time-20" name="time" value="20:00" />
+              <label for="time-20">20:00</label>
+            </div>
+            <div class="time-option">
+              <input type="radio" id="time-21" name="time" value="21:00" />
+              <label for="time-21">21:00</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="service-selection">
+          <label>
+            <span class="label-icon">💅</span>
+            원하는 서비스 (중복 선택 가능)
+          </label>
+          <div class="service-options">
+            <div class="service-option">
+              <input type="checkbox" id="service-basic" name="services" value="기본 케어" />
+              <label for="service-basic">
+                기본 케어
+                <div class="service-price">15,000원~</div>
+              </label>
+            </div>
+            <div class="service-option">
+              <input type="checkbox" id="service-art" name="services" value="아트 네일" />
+              <label for="service-art">
+                옴브레, 프렌치
+                <div class="service-price">60,000원~</div>
+              </label>
+            </div>
+            <div class="service-option">
+              <input type="checkbox" id="service-extension" name="services" value="연장" />
+              <label for="service-extension">
+                레퍼런스/프리핸드 아트
+                <div class="service-price">상담 후 가격 안내</div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="special-requests">
+          <h4>
+            <span>📝</span>
+            특이사항 및 요청사항
+          </h4>
+          <div class="form-group">
+            <textarea 
+              id="notes" 
+              name="notes" 
+              placeholder="원하시는 디자인, 색상, 특별한 요청사항이나 알레르기 등이 있으시면 자세히 적어주세요. 예) 파스텔 톤 선호, 짧은 길이 유지, 젤 알레르기 있음 등"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="submit-section">
+          <button type="submit" class="submit-btn" id="submit-btn">
+            <span class="btn-text">💫 예약 완료하기</span>
+            <div class="loading-spinner"></div>
+          </button>
+          <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+            예약 완료 후 확인 연락을 드릴 예정입니다
+          </p>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer>
+    <p>NEKORUNAIL ⎜ Instagram @nekorunail ⎜ 2025</p>
+  </footer>
+</body>
+</html>

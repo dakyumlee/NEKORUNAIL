@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEKORUNAIL</title>
+  <link rel="stylesheet" href="style.css" />
+  <script defer src="script.js"></script>
+  <script type="module">
+    import { db, storage } from './firebase.js';
+  </script>
+  
+</head>
+<body>
+  <header class="hero">
+    <h1><a href="admin.html">NEKORUNAIL</a></h1>
+    <p>4, Gaya-daero 750beon-gil Busanjin-gu Busan 3floor</p>
+    <nav>
+      <ul>
+        <li><a href="index.html">홈</a></li>
+        <li><a href="gallery.html">갤러리</a></li>
+        <li><a href="booking.html">예약</a></li>
+        <li><a href="review.html">리뷰 남기기</a></li>
+        <li><a href="come.html">찾아오시는 길</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section id="gallery">
+    <h2>네일 디자인</h2>
+    <div class="gallery-slider">
+      <div class="gallery-card">
+        <img src="9.jpeg" alt="nail art 1">
+        <div class="info">
+          <h4>6월 하기 네일</h4>
+        </div>
+      </div>
+      <div class="gallery-card">
+        <img src="1.jpeg" alt="nail art 2">
+        <div class="info">
+          <h4>reservation</h4>
+          <p>8.0</p>
+        </div>
+      </div>
+      <div class="gallery-card">
+        <img src="2.jpeg" alt="nail art 3">
+        <div class="info">
+          <h4>june art</h4>
+          <p>7.5</p>
+        </div>
+      </div>
+      <div class="gallery-card">
+        <img src="3.jpeg" alt="nail art 4">
+        <div class="info">
+          <h4>june art</h4>
+          <p>8.2</p>
+        </div>
+      </div>
+      <div class="gallery-card">
+        <img src="5.jpeg" alt="nail art 5">
+        <div class="info">
+          <h4>omakase</h4>
+          <p>9.0</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="customer-reviews" class="reviews-section">
+    <h2>고객 후기</h2>
+    <p class="section-subtitle">실제 고객님들이 남겨주신 소중한 후기입니다</p>
+    <div id="reviews-container" class="reviews-preview-grid">
+      <div class="review-loading">
+        <p>후기를 불러오는 중...</p>
+      </div>
+    </div>
+    <div class="reviews-actions">
+      <a href="review.html" class="view-more-btn">모든 후기 보기</a>
+    </div>
+  </section>
+
+
+  <footer>
+    <p>NEKORUNAIL ⎜ Instagram @nekorunail ⎜ 2025</p>
+  </footer>
+
+  <script type="module">
+    import { db } from './firebase.js';
+    import { collection, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';
+
+    async function loadHomeReviews() {
+      try {
+        const reviewsContainer = document.getElementById('reviews-container');
+        
+        const q = query(
+          collection(db, "reviews"), 
+          orderBy("createdAt", "desc"),
+          limit(5)
+        );
+        const snapshot = await getDocs(q);
+        
+        reviewsContainer.innerHTML = '';
+        
+        if (snapshot.empty) {
+          reviewsContainer.innerHTML = `
+            <div class="no-reviews">
+              <p>아직 등록된 후기가 없습니다.</p>
+              <p>첫 번째 후기를 남겨보세요! ✨</p>
+            </div>
+          `;
+          return;
+        }
+        
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const reviewCard = document.createElement('div');
+          reviewCard.className = 'review-preview';
+          
+          const createdAt = data.createdAt?.toDate?.() || new Date();
+          const dateString = createdAt.toLocaleDateString('ko-KR');
+          
+          const rating = data.rating || 5;
+          const starsDisplay = '⭐'.repeat(rating);
+          
+          const imageHtml = data.imageUrl ? 
+            `<div class="review-image">
+               <img src="${data.imageUrl}" alt="후기 사진" />
+             </div>` : '';
+          
+          reviewCard.innerHTML = `
+            ${imageHtml}
+            <div class="stars">${starsDisplay}</div>
+            <p>"${data.content}"</p>
+            <cite>- ${data.name} (${dateString})</cite>
+          `;
+          
+          reviewsContainer.appendChild(reviewCard);
+        });
+        
+      } catch (error) {
+        console.error('후기 로드 오류:', error);
+        document.getElementById('reviews-container').innerHTML = `
+          <div class="error-message">
+            <p>후기를 불러오는데 실패했습니다.</p>
+            <p>잠시 후 다시 시도해주세요.</p>
+          </div>
+        `;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadHomeReviews);
+  </script>
+</body>
+</html>

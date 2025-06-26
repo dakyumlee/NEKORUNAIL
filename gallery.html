@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>갤러리</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <body>
+        <header class="hero">
+          <nav>
+              <ul>
+                <li><a href="index.html">홈</a></li>
+                <li><a href="gallery.html">갤러리</a></li>
+                <li><a href="booking.html">예약</a></li>
+                <li><a href="review.html">리뷰 남기기</a></li>
+                <li><a href="come.html">찾아오시는 길</a></li>
+              </ul>
+            </nav>
+            <br><br>
+    <h1>네일 디자인 쇼케이스</h1>
+  </header>
+
+  <section id="gallery">
+    <div id="gallery-show" class="gallery-slider"></div>
+  </section>
+
+  <footer>
+    <p>NEKORUNAIL ⎜ Instagram @NEKORUnail ⎜ 2025</p>
+  </footer>
+
+  <script type="module">
+    import { db } from './firebase.js';
+    import { collection, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';
+
+    const gallery = document.getElementById("gallery-show");
+    const snapshot = await getDocs(query(collection(db, "gallery"), orderBy("createdAt", "desc")));
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const card = document.createElement("div");
+      card.className = "gallery-card";
+      card.innerHTML = `
+        <img src="${data.imageUrl}" alt="design" />
+        <div class="info"><h4>${data.caption || "무제"}</h4></div>
+      `;
+      gallery.appendChild(card);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>찾아오시는 길 - NEKORUNAIL</title>
+  <link rel="stylesheet" href="style.css" />
+  <script defer src="script.js"></script>
+  <script type="module">
+    import { db, storage } from './firebase.js';
+  </script>
+  <style>
+    .location-hero {
+      color: rgb(0, 0, 0);
+      padding: 4rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .location-hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="3" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+      animation: float 20s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+    
+    .location-hero h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 1;
+    }
+    
+    .location-hero p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .location-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+    
+    .location-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      margin-bottom: 4rem;
+    }
+    
+    .info-card {
+      background: white;
+      border-radius: 20px;
+      padding: 2.5rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      border-left: 5px solid hotpink;
+    }
+    
+    .info-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+    
+    .info-card h3 {
+      color: hotpink;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .info-card .icon {
+      font-size: 2rem;
+    }
+    
+    .info-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 0.8rem;
+      background: rgba(255, 105, 180, 0.05);
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+    
+    .info-item:hover {
+      background: rgba(255, 105, 180, 0.1);
+      transform: translateX(5px);
+    }
+    
+    .info-item-icon {
+      font-size: 1.2rem;
+      margin-right: 1rem;
+      color: hotpink;
+      min-width: 30px;
+    }
+    
+    .info-item-text {
+      color: #333;
+      font-weight: 500;
+    }
+    
+    .map-section {
+      background: white;
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      margin-bottom: 3rem;
+      overflow: hidden;
+    }
+    
+    .map-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    .map-header h2 {
+      color: #333;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .map-header p {
+      color: #666;
+      font-size: 1.1rem;
+    }
+    
+    .map-container {
+      position: relative;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .map-container iframe {
+      width: 100%;
+      height: 500px;
+      border: none;
+      display: block;
+    }
+    
+    .transport-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+    
+    .transport-card {
+      background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+      border-radius: 18px;
+      padding: 2rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      border-top: 4px solid;
+    }
+    
+    .transport-card.subway {
+      border-top-color: #2E8B57;
+    }
+    
+    .transport-card.bus {
+      border-top-color: #FF6347;
+    }
+    
+    .transport-card.car {
+      border-top-color: #4682B4;
+    }
+    
+    .transport-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    }
+    
+    .transport-card h3 {
+      color: #333;
+      font-size: 1.3rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .transport-icon {
+      font-size: 1.5rem;
+    }
+    
+    .transport-info {
+      color: #555;
+      line-height: 1.6;
+    }
+    
+    .transport-info p {
+      margin-bottom: 0.8rem;
+    }
+    
+    .contact-section {
+      color: rgb(0, 0, 0);
+      border-radius: 20px;
+      padding: 3rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .contact-section::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: rotate 30s linear infinite;
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    .contact-content {
+      position: relative;
+      z-index: 1;
+    }
+    
+    .contact-section h2 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .contact-section p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      margin-bottom: 2rem;
+    }
+    
+    .contact-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .contact-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem 2rem;
+      background: rgba(255, 255, 255, 0.2);
+      color: rgb(0, 0, 0);
+      text-decoration: none;
+      border-radius: 50px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .contact-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    
+    .hours-highlight {
+      background: linear-gradient(135deg, #ff69b4, #ff1493);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-top: 1rem;
+      border-left: 4px solid hotpink;
+    }
+    
+    .hours-highlight h4 {
+      color: rgb(255, 250, 252);
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+    
+    .hours-highlight p {
+      color: rgb(255, 255, 255);
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    @media (max-width: 768px) {
+      .location-hero h1 {
+        font-size: 2.5rem;
+      }
+      
+      .location-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+      
+      .location-container {
+        padding: 2rem 1rem;
+      }
+      
+      .info-card {
+        padding: 2rem;
+      }
+      
+      .map-container iframe {
+        height: 350px;
+      }
+      
+      .contact-section {
+        padding: 2rem;
+      }
+      
+      .contact-section h2 {
+        font-size: 2rem;
+      }
+      
+      .contact-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .contact-btn {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <h1><a href="admin.html">NEKORUNAIL</a></h1>
+    <p>4, Gaya-daero 750beon-gil Busanjin-gu Busan 3floor</p>
+    <nav>
+      <ul>
+        <li><a href="index.html">홈</a></li>
+        <li><a href="gallery.html">갤러리</a></li>
+        <li><a href="booking.html">예약</a></li>
+        <li><a href="review.html">리뷰 남기기</a></li>
+        <li><a href="come.html">찾아오시는 길</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="location-hero">
+    <h1>찾아오시는 길</h1>
+    <p>NEKORUNAIL로 오시는 길을 안내해드립니다</p>
+  </section>
+
+  <div class="location-container">
+    <div class="location-grid">
+      <div class="info-card">
+        <h3><span class="icon">📍</span>위치 정보</h3>
+        <div class="info-item">
+          <div class="info-item-icon">🏢</div>
+          <div class="info-item-text">부산광역시 부산진구</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-icon">📮</div>
+          <div class="info-item-text">가야대로750번길 4, 3층</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-icon">🚇</div>
+          <div class="info-item-text">부전역 도보 5분</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-icon">🚌</div>
+          <div class="info-item-text">부전사거리 정류장 인근</div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <h3><span class="icon">⏰</span>운영 시간</h3>
+        <div class="info-item">
+          <div class="info-item-icon">📅</div>
+          <div class="info-item-text">월 - 토: 10:00 - 22:00</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-icon">📅</div>
+          <div class="info-item-text">일요일: 11:00 - 20:00</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-icon">☕</div>
+          <div class="info-item-text">점심시간: 13:00 - 14:00</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-icon">📞</div>
+          <div class="info-item-text">예약 필수 (당일 예약 가능)</div>
+        </div>
+        
+        <div class="hours-highlight">
+          <h4>⚠️ 중요 안내</h4>
+          <p>방문 전 미리 예약해주시면 더욱 빠른 서비스를 받으실 수 있습니다!</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="map-section">
+      <div class="map-header">
+        <h2>지도로 찾기</h2>
+        <p>정확한 위치를 지도에서 확인하세요</p>
+      </div>
+      <div class="map-container">
+        <iframe 
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3262.0396645605983!2d129.053571405133!3d35.15563152462629!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3568eb721a31e281%3A0x9ff67af178d9458e!2z67aA7IKw6rSR7Jet7IucIOu2gOyCsOynhOq1rCDrtoDsoITroZw2NuuyiOq4uCA0!5e0!3m2!1sko!2skr!4v1750903081050!5m2!1sko!2skr" 
+          allowfullscreen="" 
+          loading="lazy" 
+          referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+      </div>
+    </div>
+
+    <div class="transport-section">
+      <div class="transport-card subway">
+        <h3><span class="transport-icon">🚇</span>지하철로 오시는 길</h3>
+        <div class="transport-info">
+          <p><strong>1호선 부전역</strong> 7번 출구</p>
+          <p>📍 7번 출구에서 도보 약 5분</p>
+          <p>🚶‍♀️ 직진 후 가야대로750번길 진입</p>
+          <p>🏢 3층 건물 (1층에 카페 있음)</p>
+        </div>
+      </div>
+
+      <div class="transport-card bus">
+        <h3><span class="transport-icon">🚌</span>버스로 오시는 길</h3>
+        <div class="transport-info">
+          <p><strong>부전사거리 정류장</strong> 하차</p>
+          <p>🚌 <strong>급행버스:</strong> 1001, 1002, 1003</p>
+          <p>🚌 <strong>일반버스:</strong> 26, 51, 80, 134</p>
+          <p>📍 정류장에서 도보 3분</p>
+        </div>
+      </div>
+
+      <div class="transport-card car">
+        <h3><span class="transport-icon">🚗</span>자차로 오시는 길</h3>
+        <div class="transport-info">
+          <p><strong>네비게이션 주소:</strong></p>
+          <p>📍 부산 부산진구 가야대로750번길 4</p>
+          <p>🅿️ <strong>주차:</strong> 근처 공영주차장 이용</p>
+          <p>💰 주차요금: 시간당 1,000원</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="contact-section">
+      <div class="contact-content">
+        <h2>💫 예약 & 문의</h2>
+        <p>궁금한 점이 있으시거나 예약을 원하신다면 언제든지 연락주세요!</p>
+        
+        <div class="contact-buttons">
+          <a href="booking.html" class="contact-btn">
+            📅 온라인 예약
+          </a>
+          <a href="https://www.instagram.com/nekorunail?igsh=eG93cng0MDg3MTBr" class="contact-btn" target="_blank">
+            📷 인스타그램
+          </a>
+          <a href="https://pf.kakao.com/_tdxbGn" class="contact-btn" target="_blank">
+            💬 카카오톡
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>NEKORUNAIL ⎜ Instagram @nekorunail ⎜ 2025</p>
+  </footer>
+</body>
+</html>
