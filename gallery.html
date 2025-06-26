@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>갤러리 - NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css">
+  <script type="module" src="optimized-firebase.js"></script>
   <style>
     .gallery-container {
       max-width: 1200px;
@@ -241,8 +242,6 @@
   </footer>
 
   <script>
-    let galleryLoaded = false;
-    let firebaseLoaded = false;
     let lastVisible = null;
     let isLoading = false;
     const ITEMS_PER_PAGE = 6;
@@ -256,35 +255,6 @@
       }
     });
 
-    function getCachedGallery() {
-      try {
-        const cached = localStorage.getItem('nekorunail_gallery_cache');
-        if (cached) {
-          const data = JSON.parse(cached);
-          const cacheTime = data.timestamp;
-          const now = Date.now();
-          if (now - cacheTime < 10 * 60 * 1000) {
-            return data.items;
-          }
-        }
-      } catch (error) {
-        console.warn('갤러리 캐시 로드 실패:', error);
-      }
-      return null;
-    }
-
-    function setCachedGallery(items) {
-      try {
-        const cacheData = {
-          items: items,
-          timestamp: Date.now()
-        };
-        localStorage.setItem('nekorunail_gallery_cache', JSON.stringify(cacheData));
-      } catch (error) {
-        console.warn('갤러리 캐시 저장 실패:', error);
-      }
-    }
-
     async function loadGallery(reset = true) {
       if (isLoading) return;
       isLoading = true;
@@ -293,17 +263,6 @@
       const loadMoreBtn = document.getElementById('load-more-btn');
 
       if (reset) {
-        const cachedItems = getCachedGallery();
-        if (cachedItems && cachedItems.length > 0) {
-          displayGalleryItems(cachedItems.slice(0, ITEMS_PER_PAGE), true);
-          if (cachedItems.length > ITEMS_PER_PAGE) {
-            loadMoreBtn.style.display = 'block';
-          }
-          isLoading = false;
-          return;
-        }
-        
-        lastVisible = null;
         gallery.innerHTML = `
           <div class="loading-gallery">
             <div class="loading-spinner"></div>
@@ -313,87 +272,16 @@
       }
 
       try {
-        if (!firebaseLoaded) {
-          const [
-            { initializeApp },
-            { getFirestore, collection, getDocs, query, orderBy, limit, startAfter }
-          ] = await Promise.all([
-            import("https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js"),
-            import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js")
-          ]);
-
-          const firebaseConfig = {
-            apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
-            authDomain: "nekorunail.firebaseapp.com",
-            projectId: "nekorunail",
-            storageBucket: "nekorunail.appspot.com",
-            messagingSenderId: "571846382457",
-            appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
-            measurementId: "G-MW8CBHGSLG"
-          };
-
-          const app = initializeApp(firebaseConfig);
-          window.db = getFirestore(app);
-          window.fbQuery = query;
-          window.fbCollection = collection;
-          window.fbGetDocs = getDocs;
-          window.fbOrderBy = orderBy;
-          window.fbLimit = limit;
-          window.fbStartAfter = startAfter;
-          
-          firebaseLoaded = true;
-        }
-
-        let q;
-        if (lastVisible) {
-          q = window.fbQuery(
-            window.fbCollection(window.db, "gallery"), 
-            window.fbOrderBy("createdAt", "desc"),
-            window.fbStartAfter(lastVisible),
-            window.fbLimit(ITEMS_PER_PAGE)
-          );
+        if (window.optimizedGalleryLoad) {
+          await window.optimizedGalleryLoad(reset, ITEMS_PER_PAGE);
         } else {
-          q = window.fbQuery(
-            window.fbCollection(window.db, "gallery"), 
-            window.fbOrderBy("createdAt", "desc"),
-            window.fbLimit(ITEMS_PER_PAGE)
-          );
-        }
-        
-        const snapshot = await window.fbGetDocs(q);
-        
-        if (snapshot.empty && reset) {
           gallery.innerHTML = `
-            <div class="no-gallery">
-              <div>🖼️</div>
-              <h3>갤러리가 비어있습니다</h3>
-              <p>관리자가 업로드한 네일 디자인이 여기에 표시됩니다.</p>
+            <div class="error-gallery">
+              <h3>갤러리 로드 실패</h3>
+              <p>최적화된 시스템을 로드할 수 없습니다.</p>
             </div>
           `;
-          isLoading = false;
-          return;
         }
-
-        const items = [];
-        snapshot.forEach(doc => {
-          items.push(doc.data());
-          lastVisible = doc;
-        });
-
-        if (reset && items.length > 0) {
-          setCachedGallery(items);
-        }
-
-        displayGalleryItems(items, reset);
-
-        if (loadMoreBtn) {
-          if (snapshot.docs.length === ITEMS_PER_PAGE) {
-            loadMoreBtn.style.display = 'block';
-          } else {
-            loadMoreBtn.style.display = 'none';
-          }
-        }
-
       } catch (error) {
         console.error("갤러리 로드 실패:", error);
         if (reset) {
@@ -407,50 +295,6 @@
       } finally {
         isLoading = false;
       }
-    }
-
-    function displayGalleryItems(items, reset) {
-      const gallery = document.getElementById("gallery-show");
-      
-      if (reset) {
-        gallery.innerHTML = '';
-      }
-
-      items.forEach((data, index) => {
-        const card = document.createElement("div");
-        card.className = "gallery-card";
-        card.style.animationDelay = `${index * 0.1}s`;
-        
-        const createdAt = data.createdAt && data.createdAt.toDate ? 
-          data.createdAt.toDate() : new Date(data.createdAt || Date.now());
-        const dateString = createdAt.toLocaleDateString('ko-KR');
-        
-        const img = document.createElement('img');
-        img.src = data.imageUrl;
-        img.alt = "nail design";
-        img.loading = "lazy";
-        img.className = "loading";
-        
-        img.onload = function() {
-          this.classList.remove('loading');
-        };
-        
-        card.innerHTML = `
-          <div style="position: relative;">
-            ${img.outerHTML}
-          </div>
-          <div class="info">
-            <h4>${data.caption || "네일 디자인"}</h4>
-            <p>업로드: ${dateString}</p>
-          </div>
-        `;
-        
-        card.addEventListener('click', function() {
-          openImageModal(data.imageUrl, data.caption || "네일 디자인");
-        });
-        
-        gallery.appendChild(card);
-      });
     }
 
     function openImageModal(imageUrl, caption) {

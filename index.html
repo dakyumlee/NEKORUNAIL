@@ -6,6 +6,7 @@
   <title>NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css" />
   <script defer src="script.js"></script>
+  <script type="module" src="optimized-firebase.js"></script>
 </head>
 <body>
   <header class="hero">
@@ -82,7 +83,6 @@
 
   <script>
     let reviewsLoaded = false;
-    let firebaseLoaded = false;
 
     document.addEventListener('DOMContentLoaded', function() {
       const reviewsSection = document.getElementById('customer-reviews');
@@ -102,155 +102,12 @@
       }
     });
 
-    function getCachedReviews() {
-      try {
-        const cached = localStorage.getItem('nekorunail_home_reviews_cache');
-        if (cached) {
-          const data = JSON.parse(cached);
-          const cacheTime = data.timestamp;
-          const now = Date.now();
-
-          if (now - cacheTime < 5 * 60 * 1000) {
-            return data.reviews;
-          }
-        }
-      } catch (error) {
-        console.warn('캐시 로드 실패:', error);
-      }
-      return null;
-    }
-
-    function setCachedReviews(reviews) {
-      try {
-        const cacheData = {
-          reviews: reviews,
-          timestamp: Date.now()
-        };
-        localStorage.setItem('nekorunail_home_reviews_cache', JSON.stringify(cacheData));
-      } catch (error) {
-        console.warn('캐시 저장 실패:', error);
-      }
-    }
-
     async function loadFirebaseReviews() {
-      const reviewsContainer = document.getElementById('reviews-container');
-      
-      const cachedReviews = getCachedReviews();
-      if (cachedReviews && cachedReviews.length > 0) {
-        displayReviews(cachedReviews);
-        return;
-      }
-
-      try {
-        if (!firebaseLoaded) {
-          const [
-            { initializeApp },
-            { getFirestore, collection, getDocs, query, orderBy, limit }
-          ] = await Promise.all([
-            import("https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js"),
-            import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js")
-          ]);
-
-          const firebaseConfig = {
-            apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
-            authDomain: "nekorunail.firebaseapp.com",
-            projectId: "nekorunail",
-            storageBucket: "nekorunail.appspot.com",
-            messagingSenderId: "571846382457",
-            appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
-            measurementId: "G-MW8CBHGSLG"
-          };
-
-          const app = initializeApp(firebaseConfig);
-          window.db = getFirestore(app);
-          window.fbQuery = query;
-          window.fbCollection = collection;
-          window.fbGetDocs = getDocs;
-          window.fbOrderBy = orderBy;
-          window.fbLimit = limit;
-          
-          firebaseLoaded = true;
-        }
-
-        const q = window.fbQuery(
-          window.fbCollection(window.db, "reviews"), 
-          window.fbOrderBy("createdAt", "desc"), 
-          window.fbLimit(3)
-        );
-        
-        const snapshot = await window.fbGetDocs(q);
-        
-        if (snapshot.empty) {
-          displayNoReviews();
-          return;
-        }
-        
-        const reviews = [];
-        snapshot.forEach(doc => {
-          reviews.push(doc.data());
-        });
-
-        setCachedReviews(reviews);
-        
-        displayReviews(reviews);
-        
-      } catch (error) {
-        console.error('후기 로드 오류:', error);
+      if (window.optimizedIndexReviews) {
+        await window.optimizedIndexReviews();
+      } else {
         displayErrorMessage();
       }
-    }
-
-    function displayReviews(reviews) {
-      const reviewsContainer = document.getElementById('reviews-container');
-      reviewsContainer.innerHTML = '';
-      
-      reviews.forEach(data => {
-        const reviewCard = document.createElement('div');
-        reviewCard.className = 'review-preview';
-        
-        const createdAt = data.createdAt && data.createdAt.toDate ? 
-          data.createdAt.toDate() : new Date();
-        const dateString = createdAt.toLocaleDateString('ko-KR');
-        
-        const rating = data.rating || 5;
-        const starsDisplay = '⭐'.repeat(rating);
-        
-        const imageHtml = data.imageUrl ? 
-          `<div class="review-image">
-             <img src="${data.imageUrl}" alt="후기 사진" style="
-               width: 80px; 
-               height: 80px; 
-               object-fit: cover; 
-               border-radius: 8px; 
-               float: left; 
-               margin-right: 1rem;
-               box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-             " loading="lazy" />
-           </div>` : '';
-        
-        reviewCard.innerHTML = `
-          ${imageHtml}
-          <div class="stars">${starsDisplay}</div>
-          <p style="
-            line-height: 1.6; 
-            margin: 0.5rem 0; 
-            ${data.imageUrl ? 'min-height: 80px; display: flex; align-items: center;' : ''}
-            color: #333;
-            font-size: 1rem;
-          ">"${data.content}"</p>
-          <cite style="
-            clear: both; 
-            display: block; 
-            margin-top: 1rem; 
-            font-style: normal; 
-            color: #666; 
-            font-weight: 500; 
-            font-size: 0.9rem;
-          ">- ${data.name} (${dateString})</cite>
-        `;
-        
-        reviewsContainer.appendChild(reviewCard);
-      });
     }
 
     function displayNoReviews() {

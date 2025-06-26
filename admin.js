@@ -927,3 +927,4 @@ function showNotification(message, type = 'success') {
 }
 
 console.log('=== 최적화된 Firebase 관리자 스크립트 로드 완료 ===');
+<script type="module" src="optimized-firebase.js"></script>

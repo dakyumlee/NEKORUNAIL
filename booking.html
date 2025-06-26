@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>예약하기 - NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css" />
+  <script type="module" src="optimized-firebase.js"></script>
   <style>
     .booking-hero {
       color: rgb(0, 0, 0);
@@ -593,7 +594,6 @@
   </footer>
 
   <script>
-    let firebaseLoaded = false;
     let timeSlotCache = new Map();
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -649,44 +649,6 @@
       });
     }
 
-    async function loadFirebase() {
-      if (firebaseLoaded) return;
-
-      try {
-        const [
-          { initializeApp },
-          { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp }
-        ] = await Promise.all([
-          import("https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js"),
-          import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js")
-        ]);
-
-        const firebaseConfig = {
-          apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
-          authDomain: "nekorunail.firebaseapp.com",
-          projectId: "nekorunail",
-          storageBucket: "nekorunail.appspot.com",
-          messagingSenderId: "571846382457",
-          appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
-          measurementId: "G-MW8CBHGSLG"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        window.db = getFirestore(app);
-        window.fbCollection = collection;
-        window.fbAddDoc = addDoc;
-        window.fbGetDocs = getDocs;
-        window.fbQuery = query;
-        window.fbWhere = where;
-        window.fbServerTimestamp = serverTimestamp;
-        
-        firebaseLoaded = true;
-      } catch (error) {
-        console.error('Firebase 로드 실패:', error);
-        throw error;
-      }
-    }
-
     async function checkTimeSlotAvailable(date, time) {
       const cacheKey = `${date}-${time}`;
       if (timeSlotCache.has(cacheKey)) {
@@ -694,25 +656,20 @@
       }
 
       try {
-        await loadFirebase();
-        
-        const q = window.fbQuery(
-          window.fbCollection(window.db, "bookings"),
-          window.fbWhere("date", "==", date),
-          window.fbWhere("time", "==", time),
-          window.fbWhere("status", "!=", "cancelled")
-        );
-        
-        const snapshot = await window.fbGetDocs(q);
-        const isAvailable = snapshot.empty;
-        
-        timeSlotCache.set(cacheKey, isAvailable);
-        
-        setTimeout(() => {
-          timeSlotCache.delete(cacheKey);
-        }, 60000);
-        
-        return isAvailable;
+        if (window.loadOptimizedBookings) {
+          const bookings = await window.loadOptimizedBookings(50, date);
+          const isAvailable = !bookings.some(booking => 
+            booking.time === time && booking.status !== 'cancelled'
+          );
+          
+          timeSlotCache.set(cacheKey, isAvailable);
+          setTimeout(() => {
+            timeSlotCache.delete(cacheKey);
+          }, 60000);
+          
+          return isAvailable;
+        }
+        return true;
       } catch (error) {
         console.error('시간대 체크 실패:', error);
         return true;
@@ -723,21 +680,14 @@
       if (!selectedDate) return;
 
       try {
-        await loadFirebase();
+        let bookedTimes = [];
         
-        const q = window.fbQuery(
-          window.fbCollection(window.db, "bookings"),
-          window.fbWhere("date", "==", selectedDate),
-          window.fbWhere("status", "!=", "cancelled")
-        );
-        
-        const snapshot = await window.fbGetDocs(q);
-        
-        const bookedTimes = [];
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          bookedTimes.push(data.time);
-        });
+        if (window.loadOptimizedBookings) {
+          const bookings = await window.loadOptimizedBookings(50, selectedDate);
+          bookedTimes = bookings
+            .filter(booking => booking.status !== 'cancelled')
+            .map(booking => booking.time);
+        }
 
         const timeOptions = document.querySelectorAll('.time-option');
         timeOptions.forEach(option => {
@@ -771,22 +721,6 @@
 
       } catch (error) {
         console.error('시간대 업데이트 실패:', error);
-      }
-    }
-
-    async function saveBooking(bookingData) {
-      try {
-        await loadFirebase();
-        
-        const docRef = await window.fbAddDoc(window.fbCollection(window.db, "bookings"), {
-          ...bookingData,
-          createdAt: window.fbServerTimestamp()
-        });
-        
-        return docRef.id;
-      } catch (error) {
-        console.error('예약 저장 실패:', error);
-        throw error;
       }
     }
 
@@ -835,7 +769,12 @@
           status: 'pending'
         };
 
-        const bookingId = await saveBooking(bookingData);
+        let bookingId;
+        if (window.addOptimizedDocument) {
+          bookingId = await window.addOptimizedDocument('bookings', bookingData);
+        } else {
+          throw new Error('최적화된 Firebase 시스템을 로드할 수 없습니다.');
+        }
         
         const servicesText = services.length > 0 ? services.join(', ') : '기본 케어';
         
