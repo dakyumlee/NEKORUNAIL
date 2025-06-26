@@ -28,7 +28,6 @@
     document.addEventListener("DOMContentLoaded", function() {
       console.log('DOM 로드 완료');
       
-      // 별점 초기화
       const starRating = document.getElementById('star-rating');
       if (starRating) {
         starRating.innerHTML = `
@@ -41,7 +40,6 @@
         console.log('별점 생성 완료');
       }
 
-      // 폼 제출 이벤트
       const reviewForm = document.getElementById("review-form");
       if (reviewForm) {
         reviewForm.addEventListener("submit", async function(e) {
@@ -50,11 +48,51 @@
         });
       }
 
-      // 리뷰 로드
+      const imageInput = document.getElementById("review-image");
+      const imagePreview = document.getElementById("image-preview");
+      const previewImg = document.getElementById("preview-img");
+      const removeImageBtn = document.getElementById("remove-image");
+      
+      if (imageInput) {
+        imageInput.addEventListener("change", function(e) {
+          const file = e.target.files[0];
+          if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+              alert("파일 크기는 5MB 이하여야 합니다.");
+              imageInput.value = '';
+              return;
+            }
+
+            if (!file.type.startsWith('image/')) {
+              alert("이미지 파일만 업로드 가능합니다.");
+              imageInput.value = '';
+              return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              if (previewImg) previewImg.src = e.target.result;
+              if (imagePreview) imagePreview.style.display = 'block';
+              const uploadArea = document.querySelector('.image-upload-area');
+              if (uploadArea) uploadArea.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+
+      if (removeImageBtn) {
+        removeImageBtn.addEventListener("click", function() {
+          imageInput.value = '';
+          if (imagePreview) imagePreview.style.display = 'none';
+          const uploadArea = document.querySelector('.image-upload-area');
+          if (uploadArea) uploadArea.style.display = 'block';
+        });
+      }
+
       loadReviews();
     });
 
-    // 전역 함수로 별점 선택
     window.selectRating = function(rating) {
       selectedRating = rating;
       document.getElementById('rating').value = rating;
@@ -85,6 +123,8 @@
       const name = document.getElementById("reviewer").value.trim();
       const content = document.getElementById("review-content").value.trim();
       const rating = selectedRating;
+      const imageInput = document.getElementById("review-image");
+      const imageFile = imageInput ? imageInput.files[0] : null;
       
       if (!name || !content) {
         alert("이름과 후기 내용을 입력해주세요.");
@@ -97,16 +137,26 @@
       }
 
       try {
+        let imageUrl = null;
+
+        if (imageFile) {
+          console.log('이미지 업로드 시작');
+          const imageRef = ref(storage, `reviews/${Date.now()}_${imageFile.name}`);
+          await uploadBytes(imageRef, imageFile);
+          imageUrl = await getDownloadURL(imageRef);
+          console.log('이미지 업로드 완료:', imageUrl);
+        }
+
         await addDoc(collection(db, "reviews"), {
           name,
           content,
           rating,
+          imageUrl,
           createdAt: serverTimestamp()
         });
         
         alert("후기가 등록되었습니다! 감사합니다 💖");
-        
-        // 폼 초기화
+
         document.getElementById("review-form").reset();
         selectedRating = 0;
         document.getElementById('rating').value = '';
@@ -114,8 +164,12 @@
         const stars = document.querySelectorAll('.star');
         stars.forEach(star => star.style.opacity = '0.3');
         document.querySelector('.rating-text').textContent = '별을 클릭하여 평점을 매겨주세요';
+
+        const imagePreview = document.getElementById("image-preview");
+        if (imagePreview) imagePreview.style.display = 'none';
+        const uploadArea = document.querySelector('.image-upload-area');
+        if (uploadArea) uploadArea.style.display = 'block';
         
-        // 리뷰 다시 로드
         loadReviews();
 
       } catch (error) {
@@ -210,6 +264,22 @@
         <div class="form-group">
           <label for="review-content">후기 내용</label>
           <textarea id="review-content" placeholder="네일 서비스는 어떠셨나요? 솔직한 후기를 남겨주세요 💖" required style="font-family: 'MaruBuri'; height: 120px; resize: vertical;"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="review-image">사진 첨부 (선택사항)</label>
+          <div class="image-upload-area">
+            <input type="file" id="review-image" accept="image/*" />
+            <div class="upload-placeholder">
+              <div class="upload-icon">📷</div>
+              <p>네일 사진을 업로드해주세요</p>
+              <span class="upload-hint">JPG, PNG, GIF 형식 (최대 5MB)</span>
+            </div>
+          </div>
+          <div id="image-preview" style="display: none;">
+            <img id="preview-img" alt="미리보기" />
+            <button type="button" id="remove-image">사진 제거</button>
+          </div>
         </div>
         
         <button type="submit" id="submit-btn">
