@@ -1,215 +1,10 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>갤러리 - NEKORUNAIL</title>
-  <link rel="stylesheet" href="style.css">
-  <script type="module" src="optimized-firebase.js"></script>
-  <style>
-    .gallery-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 1rem;
-    }
-
-    #gallery-show {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 2rem;
-      margin-top: 2rem;
-    }
-
-    .gallery-card {
-      min-width: 280px;
-      background: white;
-      border-radius: 18px;
-      overflow: hidden;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      transition: all 0.3s ease;
-      cursor: pointer;
-      margin-bottom: 2rem;
-      opacity: 0;
-      transform: translateY(20px);
-      animation: fadeInUp 0.6s ease forwards;
-    }
-
-    .gallery-card:hover {
-      transform: translateY(-5px) scale(1.02);
-      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-    }
-
-    .gallery-card img {
-      width: 100%;
-      height: 240px;
-      object-fit: cover;
-      display: block;
-      transition: opacity 0.3s ease;
-    }
-
-    .gallery-card img.loading {
-      opacity: 0.3;
-    }
-
-    .gallery-card .info {
-      padding: 1.5rem;
-      text-align: center;
-    }
-
-    .gallery-card .info h4 {
-      margin: 0 0 0.5rem;
-      font-weight: 600;
-      font-size: 1.1rem;
-      color: #333;
-    }
-
-    .gallery-card .info p {
-      margin: 0;
-      color: #666;
-      font-size: 0.9rem;
-    }
-
-    .loading-gallery, .no-gallery, .error-gallery {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: #718096;
-      background: white;
-      border-radius: 18px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      margin: 2rem auto;
-      max-width: 600px;
-      grid-column: 1 / -1;
-    }
-
-    .loading-gallery h3, .no-gallery h3, .error-gallery h3 {
-      color: #4a5568;
-      margin-bottom: 1rem;
-      font-size: 1.3rem;
-    }
-
-    .no-gallery div {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-    }
-
-    .loading-spinner {
-      display: inline-block;
-      width: 40px;
-      height: 40px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid hotpink;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 2rem auto;
-    }
-
-    .load-more-btn {
-      display: block;
-      margin: 2rem auto;
-      padding: 1rem 2rem;
-      background: hotpink;
-      color: white;
-      border: none;
-      border-radius: 50px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s ease;
-    }
-
-    .load-more-btn:hover {
-      background: #ff69b4;
-      transform: translateY(-2px);
-    }
-
-    .image-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      cursor: pointer;
-    }
-
-    .modal-content {
-      position: relative;
-      max-width: 90vw;
-      max-height: 90vh;
-      background: white;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-    }
-
-    .modal-content img {
-      max-width: 100%;
-      max-height: 80vh;
-      display: block;
-    }
-
-    .close-modal {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 2rem;
-      color: white;
-      cursor: pointer;
-      z-index: 10001;
-      background: rgba(0,0,0,0.5);
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-caption {
-      padding: 1rem;
-      text-align: center;
-      background: white;
-      font-weight: 600;
-      color: #333;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    @keyframes fadeInUp {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .gallery-card:nth-child(2) { animation-delay: 0.1s; }
-    .gallery-card:nth-child(3) { animation-delay: 0.2s; }
-    .gallery-card:nth-child(4) { animation-delay: 0.3s; }
-    .gallery-card:nth-child(5) { animation-delay: 0.4s; }
-    .gallery-card:nth-child(6) { animation-delay: 0.5s; }
-
-    @media (max-width: 768px) {
-      #gallery-show {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-        padding: 0 1rem;
-      }
-
-      .gallery-card {
-        min-width: auto;
-      }
-
-      .loading-gallery, .no-gallery, .error-gallery {
-        padding: 2rem 1rem;
-        margin: 1rem;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="hero">
@@ -222,115 +17,72 @@
         <li><a href="come.html">찾아오시는 길</a></li>
       </ul>
     </nav>
-    <br><br>
-    <h1>네일 디자인 쇼케이스</h1>
-    <p>아름다운 네일 디자인들을 감상해보세요</p>
   </header>
 
-  <section id="gallery" class="gallery-container" style="padding: 3rem 1.5rem;">
-    <div id="gallery-show">
-      <div class="loading-gallery">
-        <div class="loading-spinner"></div>
-        <p>갤러리를 불러오는 중...</p>
-      </div>
-    </div>
-    <button id="load-more-btn" class="load-more-btn" style="display: none;">더 많은 이미지 보기</button>
+  <section class="hero-content">
+    <h1>🎨 네일 디자인 갤러리</h1>
+    <p>다양한 아트 스타일을 구경해보세요!</p>
   </section>
 
+  <main class="gallery-container" id="gallery-list">
+    <p>로딩 중입니다...</p>
+  </main>
+
   <footer>
-    <p>NEKORUNAIL ⎜ Instagram @NEKORUnail ⎜ 2025</p>
+    <p>NEKORUNAIL ⎜ Instagram @nekorunail ⎜ 2025</p>
   </footer>
 
-  <script>
-    let lastVisible = null;
-    let isLoading = false;
-    const ITEMS_PER_PAGE = 6;
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
 
-    document.addEventListener('DOMContentLoaded', function() {
-      loadGallery();
-      
-      const loadMoreBtn = document.getElementById('load-more-btn');
-      if (loadMoreBtn) {
-        loadMoreBtn.addEventListener('click', () => loadGallery(false));
-      }
-    });
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
+      authDomain: "nekorunail.firebaseapp.com",
+      projectId: "nekorunail",
+      storageBucket: "nekorunail.appspot.com",
+      messagingSenderId: "571846382457",
+      appId: "1:571846382457:web:6c0f66ca63163473fd15a8"
+    };
 
-    async function loadGallery(reset = true) {
-      if (isLoading) return;
-      isLoading = true;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
 
-      const gallery = document.getElementById("gallery-show");
-      const loadMoreBtn = document.getElementById('load-more-btn');
-
-      if (reset) {
-        gallery.innerHTML = `
-          <div class="loading-gallery">
-            <div class="loading-spinner"></div>
-            <p>갤러리를 불러오는 중...</p>
-          </div>
-        `;
-      }
-
+    async function loadGallery() {
+      const listDiv = document.getElementById("gallery-list");
+      listDiv.innerHTML = "";
       try {
-        if (window.optimizedGalleryLoad) {
-          await window.optimizedGalleryLoad(reset, ITEMS_PER_PAGE);
-        } else {
-          gallery.innerHTML = `
-            <div class="error-gallery">
-              <h3>갤러리 로드 실패</h3>
-              <p>최적화된 시스템을 로드할 수 없습니다.</p>
-            </div>
-          `;
+        const querySnapshot = await getDocs(collection(db, "gallery"));
+        if (querySnapshot.empty) {
+          listDiv.innerHTML = "<p>업로드된 이미지가 없습니다.</p>";
+          return;
         }
-      } catch (error) {
-        console.error("갤러리 로드 실패:", error);
-        if (reset) {
-          gallery.innerHTML = `
-            <div class="error-gallery">
-              <h3>갤러리 로드 실패</h3>
-              <p>오류가 발생했습니다. 잠시 후 새로고침해주세요.</p>
-            </div>
+
+        const fragment = document.createDocumentFragment();
+
+        for (const doc of querySnapshot.docs) {
+          const data = doc.data();
+          const storagePath = data.url;
+          const url = await getDownloadURL(ref(storage, storagePath));
+          const card = document.createElement("div");
+          card.className = "gallery-card";
+          card.innerHTML = `
+            <img src="${url}" alt="네일 아트" />
+            <p>${data.description || ""}</p>
           `;
+          fragment.appendChild(card);
         }
-      } finally {
-        isLoading = false;
+
+        listDiv.appendChild(fragment);
+      } catch (err) {
+        console.error("갤러리 불러오기 오류:", err);
+        listDiv.innerHTML = "<p>이미지를 불러오지 못했습니다.</p>";
       }
     }
 
-    function openImageModal(imageUrl, caption) {
-      const modal = document.createElement('div');
-      modal.className = 'image-modal';
-      modal.innerHTML = `
-        <div class="modal-content">
-          <span class="close-modal">&times;</span>
-          <img src="${imageUrl}" alt="${caption}" loading="lazy" />
-          <div class="modal-caption">
-            <h3>${caption}</h3>
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-      
-      const closeModal = function() {
-        document.body.removeChild(modal);
-      };
-      
-      modal.querySelector('.close-modal').onclick = closeModal;
-      modal.onclick = function(e) {
-        if (e.target === modal) closeModal();
-      };
-      
-      const escHandler = function(e) {
-        if (e.key === 'Escape') {
-          closeModal();
-          document.removeEventListener('keydown', escHandler);
-        }
-      };
-      document.addEventListener('keydown', escHandler);
-    }
-
-    window.openImageModal = openImageModal;
+    loadGallery();
   </script>
 </body>
 </html>
