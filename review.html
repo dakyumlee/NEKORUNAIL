@@ -5,9 +5,172 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>리뷰 - NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css">
-  <script defer src="review.js"></script>
   <script type="module">
     import { db, storage } from './firebase.js';
+    import {
+      collection,
+      addDoc,
+      getDocs,
+      query,
+      orderBy,
+      serverTimestamp,
+      limit,
+      startAfter
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    import {
+      ref,
+      uploadBytes,
+      getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
+
+    let selectedRating = 0;
+
+    document.addEventListener("DOMContentLoaded", function() {
+      console.log('DOM 로드 완료');
+      
+      // 별점 초기화
+      const starRating = document.getElementById('star-rating');
+      if (starRating) {
+        starRating.innerHTML = `
+          <span class="star" onclick="selectRating(1)" style="font-size: 2rem; cursor: pointer; opacity: 0.3;">⭐</span>
+          <span class="star" onclick="selectRating(2)" style="font-size: 2rem; cursor: pointer; opacity: 0.3;">⭐</span>
+          <span class="star" onclick="selectRating(3)" style="font-size: 2rem; cursor: pointer; opacity: 0.3;">⭐</span>
+          <span class="star" onclick="selectRating(4)" style="font-size: 2rem; cursor: pointer; opacity: 0.3;">⭐</span>
+          <span class="star" onclick="selectRating(5)" style="font-size: 2rem; cursor: pointer; opacity: 0.3;">⭐</span>
+        `;
+        console.log('별점 생성 완료');
+      }
+
+      // 폼 제출 이벤트
+      const reviewForm = document.getElementById("review-form");
+      if (reviewForm) {
+        reviewForm.addEventListener("submit", async function(e) {
+          e.preventDefault();
+          await handleReviewSubmit();
+        });
+      }
+
+      // 리뷰 로드
+      loadReviews();
+    });
+
+    // 전역 함수로 별점 선택
+    window.selectRating = function(rating) {
+      selectedRating = rating;
+      document.getElementById('rating').value = rating;
+      
+      const stars = document.querySelectorAll('.star');
+      stars.forEach((star, index) => {
+        if (index < rating) {
+          star.style.opacity = '1';
+        } else {
+          star.style.opacity = '0.3';
+        }
+      });
+      
+      const texts = [
+        '별을 클릭하여 평점을 매겨주세요',
+        '⭐ 별로예요',
+        '⭐⭐ 그저 그래요',
+        '⭐⭐⭐ 보통이에요',
+        '⭐⭐⭐⭐ 좋아요',
+        '⭐⭐⭐⭐⭐ 최고예요!'
+      ];
+      
+      document.querySelector('.rating-text').textContent = texts[rating];
+      console.log('별점 선택됨:', rating);
+    };
+
+    async function handleReviewSubmit() {
+      const name = document.getElementById("reviewer").value.trim();
+      const content = document.getElementById("review-content").value.trim();
+      const rating = selectedRating;
+      
+      if (!name || !content) {
+        alert("이름과 후기 내용을 입력해주세요.");
+        return;
+      }
+
+      if (!rating || rating < 1 || rating > 5) {
+        alert("별점을 선택해주세요.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "reviews"), {
+          name,
+          content,
+          rating,
+          createdAt: serverTimestamp()
+        });
+        
+        alert("후기가 등록되었습니다! 감사합니다 💖");
+        
+        // 폼 초기화
+        document.getElementById("review-form").reset();
+        selectedRating = 0;
+        document.getElementById('rating').value = '';
+        
+        const stars = document.querySelectorAll('.star');
+        stars.forEach(star => star.style.opacity = '0.3');
+        document.querySelector('.rating-text').textContent = '별을 클릭하여 평점을 매겨주세요';
+        
+        // 리뷰 다시 로드
+        loadReviews();
+
+      } catch (error) {
+        console.error("후기 등록 실패:", error);
+        alert("후기 등록 중 오류가 발생했습니다.");
+      }
+    }
+
+    async function loadReviews() {
+      try {
+        const reviewsContainer = document.getElementById("reviews-container");
+        if (!reviewsContainer) return;
+        
+        const q = query(collection(db, "reviews"), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+        
+        reviewsContainer.innerHTML = '';
+        
+        if (snapshot.empty) {
+          reviewsContainer.innerHTML = `
+            <div class="no-reviews">
+              <p>아직 등록된 후기가 없습니다.</p>
+              <p>첫 번째 후기를 남겨보세요! ✨</p>
+            </div>
+          `;
+          return;
+        }
+        
+        snapshot.forEach(function(doc) {
+          const data = doc.data();
+          const reviewBox = document.createElement("div");
+          reviewBox.className = "review-box";
+          
+          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const dateString = createdAt.toLocaleDateString('ko-KR');
+          
+          const rating = data.rating || 5;
+          const starsDisplay = '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
+          
+          reviewBox.innerHTML = `
+            <div class="review-header">
+              <strong class="review-author">👤 ${data.name}</strong>
+              <span class="review-date">📅 ${dateString}</span>
+            </div>
+            <div class="review-rating">${starsDisplay}</div>
+            <div class="review-content">${data.content}</div>
+          `;
+          
+          reviewsContainer.appendChild(reviewBox);
+        });
+        
+      } catch (error) {
+        console.error("후기 로드 실패:", error);
+      }
+    }
   </script>
 </head>
 <body>
@@ -37,7 +200,8 @@
         
         <div class="form-group">
           <label for="rating">별점</label>
-          <div class="star-rating" id="star-rating">
+          <div class="star-rating" id="star-rating" style="display: flex; gap: 0.3rem; margin: 1rem 0; justify-content: center;">
+            
           </div>
           <input type="hidden" id="rating" name="rating" required />
           <p class="rating-text">별을 클릭하여 평점을 매겨주세요</p>
@@ -48,25 +212,8 @@
           <textarea id="review-content" placeholder="네일 서비스는 어떠셨나요? 솔직한 후기를 남겨주세요 💖" required style="font-family: 'MaruBuri'; height: 120px; resize: vertical;"></textarea>
         </div>
         
-        <div class="form-group">
-          <label for="review-image">사진 첨부 (선택사항)</label>
-          <div class="image-upload-area">
-            <input type="file" id="review-image" accept="image/*" />
-            <div class="upload-placeholder">
-              <div class="upload-icon">📷</div>
-              <p>네일 사진을 업로드해주세요</p>
-              <span class="upload-hint">JPG, PNG, GIF 형식 (최대 5MB)</span>
-            </div>
-          </div>
-          <div id="image-preview" style="display: none;">
-            <img id="preview-img" alt="미리보기" />
-            <button type="button" id="remove-image">사진 제거</button>
-          </div>
-        </div>
-        
-        <button type="submit" id="submit-btn"> 
-          <span class="btn-text">후기 등록하기</span>
-          <div class="loading" style="display: none;"></div>
+        <button type="submit" id="submit-btn">
+          후기 등록하기
         </button>
       </form>
     </div>
@@ -74,18 +221,7 @@
 
   <section class="reviews-display-section">
     <h3>고객님들의 후기</h3>
-    <div class="reviews-sort">ㅌ
-      <select id="review-sort">
-        <option value="newest">최신순</option>
-        <option value="oldest">오래된순</option>
-        <option value="highest">별점 높은순</option>
-        <option value="lowest">별점 낮은순</option>
-      </select>
-    </div>
     <div id="reviews-container"></div>
-    <div id="load-more-container" style="text-align: center; margin-top: 2rem;">
-      <button id="load-more-btn" style="display: none;">더 보기</button>
-    </div>
   </section>
 
   <footer>
