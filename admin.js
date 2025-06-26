@@ -1,10 +1,138 @@
-let isLoggedIn = false;
+window.showBookingDetails = function(index) {
+    const bookings = getLocalData('bookings');
+    const booking = bookings[index];
+    
+    if (!booking) return;
+    
+    const services = Array.isArray(booking.services) ? booking.services.join(', ') : (booking.services || '기본 케어');
+    const notes = booking.notes || '특이사항 없음';
+    const createdAt = new Date(booking.createdAt);
+    const createdDate = createdAt.toLocaleDateString('ko-KR');
+    const createdTime = createdAt.toLocaleTimeString('ko-KR');
+    
+    // 모달 창 생성 요청사항 제대로보기
+    const modal = document.createElement('div');
+    modal.id = 'booking-detail-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: white;
+            border-radius: 18px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 1rem;">
+                <h3 style="margin: 0; color: #333; font-size: 1.5rem;">📋 예약 상세정보</h3>
+                <span onclick="closeBookingModal()" style="
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    color: #666;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    background: #f3f4f6;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">&times;</span>
+            </div>
+            
+            <div style="display: grid; gap: 1.5rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div style="background: #f8fafc; padding: 1rem; border-radius: 10px; border-left: 4px solid hotpink;">
+                        <strong style="color: #333; display: block; margin-bottom: 0.5rem;">👤 고객 정보</strong>
+                        <div style="color: #666;">이름: ${booking.name}</div>
+                        <div style="color: #666;">연락처: ${booking.phone}</div>
+                    </div>
+                    
+                    <div style="background: #f0fdf4; padding: 1rem; border-radius: 10px; border-left: 4px solid #22c55e;">
+                        <strong style="color: #333; display: block; margin-bottom: 0.5rem;">📅 예약 일정</strong>
+                        <div style="color: #666;">날짜: ${booking.date}</div>
+                        <div style="color: #666;">시간: ${booking.time}</div>
+                    </div>
+                </div>
+                
+                <div style="background: #fef3c7; padding: 1rem; border-radius: 10px; border-left: 4px solid #f59e0b;">
+                    <strong style="color: #333; display: block; margin-bottom: 0.5rem;">💅 선택 서비스</strong>
+                    <div style="color: #666; line-height: 1.5;">${services}</div>
+                </div>
+                
+                <div style="background: #e0f2fe; padding: 1rem; border-radius: 10px; border-left: 4px solid #0ea5e9;">
+                    <strong style="color: #333; display: block; margin-bottom: 0.5rem;">📝 고객 요청사항</strong>
+                    <div style="color: #666; line-height: 1.6; white-space: pre-wrap;">${notes}</div>
+                </div>
+                
+                <div style="background: #f3f4f6; padding: 1rem; border-radius: 10px; border-left: 4px solid #6b7280;">
+                    <strong style="color: #333; display: block; margin-bottom: 0.5rem;">ℹ️ 접수 정보</strong>
+                    <div style="color: #666;">접수일: ${createdDate}</div>
+                    <div style="color: #666;">접수시간: ${createdTime}</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem; text-align: center;">
+                <button onclick="closeBookingModal()" style="
+                    background: hotpink;
+                    color: white;
+                    border: none;
+                    padding: 0.8rem 2rem;
+                    border-radius: 50px;
+                    cursor: pointer;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.background='#ff69b4'" onmouseout="this.style.background='hotpink'">확인</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // ESC 키로 닫기
+    const escHandler = function(e) {
+        if (e.key === 'Escape') {
+            closeBookingModal();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+    
+    // 모달 외부 클릭시 닫기
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeBookingModal();
+        }
+    });
+};
+
+window.closeBookingModal = function() {
+    const modal = document.getElementById('booking-detail-modal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+};let isLoggedIn = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeAdmin();
 });
 
-// 로컬스토리지 데이터 가져오기 가져온나. 가져온나어이.
+// 로컬스토리지 데이터 가져오기
 function getLocalData(key) {
     const stored = localStorage.getItem(`nekorunail_${key}`);
     return stored ? JSON.parse(stored) : [];
@@ -206,7 +334,7 @@ function loadLocalDashboard() {
     const gallery = getLocalData('gallery');
     const reviews = getLocalData('reviews');
     
-    // 오늘 예약 계산
+    // 오늘 예약 계산 하 이거때문인가
     const today = new Date().toISOString().split('T')[0];
     const todayBookings = bookings.filter(booking => booking.date === today);
     
@@ -231,7 +359,7 @@ function loadRecentBookings() {
     if (!recentBookings) return;
     
     const bookings = getLocalData('bookings');
-    const recentList = bookings.slice(0, 5); // 최근 5개만...
+    const recentList = bookings.slice(0, 5); // 최근 5개
     
     recentBookings.innerHTML = '';
     
@@ -267,10 +395,11 @@ function loadBookings() {
     const bookings = getLocalData('bookings');
     
     bookingsList.innerHTML = `
-        <div class="data-row data-header">
+        <div class="data-row data-header" style="grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto;">
             <div><strong>이름</strong></div>
             <div><strong>연락처</strong></div>
             <div><strong>예약일시</strong></div>
+            <div><strong>서비스</strong></div>
             <div><strong>상태</strong></div>
             <div><strong>작업</strong></div>
         </div>
@@ -284,23 +413,39 @@ function loadBookings() {
     bookings.forEach((data, index) => {
         const row = document.createElement('div');
         row.className = 'data-row';
+        row.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 1fr auto';
         
         const status = data.status || 'pending';
         const statusClass = `status-${status}`;
         const statusText = status === 'confirmed' ? '확정' : status === 'cancelled' ? '취소' : '대기';
         
+        const services = Array.isArray(data.services) ? data.services.join(', ') : (data.services || '기본 케어');
+        
         row.innerHTML = `
-            <div>${data.name}</div>
-            <div>${data.phone}</div>
-            <div>${data.date} ${data.time}</div>
-            <div><span class="status-badge ${statusClass}">${statusText}</span></div>
             <div>
-                <select onchange="updateBookingStatus(${index}, this.value)">
+                <strong>${data.name}</strong>
+                ${data.notes ? `<br><small style="color: #666; font-size: 0.8rem;">💬 ${data.notes.substring(0, 30)}${data.notes.length > 30 ? '...' : ''}</small>` : ''}
+            </div>
+            <div>${data.phone}</div>
+            <div>${data.date}<br><small>${data.time}</small></div>
+            <div style="font-size: 0.9rem; color: #666;">${services}</div>
+            <div><span class="status-badge ${statusClass}">${statusText}</span></div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <select onchange="updateBookingStatus(${index}, this.value)" style="font-size: 0.9rem;">
                     <option value="pending" ${status === 'pending' ? 'selected' : ''}>대기</option>
                     <option value="confirmed" ${status === 'confirmed' ? 'selected' : ''}>확정</option>
                     <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>취소</option>
                 </select>
-                <button class="delete-btn" onclick="deleteBooking(${index})">삭제</button>
+                <button onclick="showBookingDetails(${index})" style="
+                    background: #3b82f6; 
+                    color: white; 
+                    border: none; 
+                    padding: 0.3rem 0.8rem; 
+                    border-radius: 5px; 
+                    cursor: pointer; 
+                    font-size: 0.8rem;
+                ">상세</button>
+                <button class="delete-btn" onclick="deleteBooking(${index})" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">삭제</button>
             </div>
         `;
         bookingsList.appendChild(row);
