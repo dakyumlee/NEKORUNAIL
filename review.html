@@ -6,58 +6,72 @@
   <title>리뷰 - NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    .reviews-display-section {
+    .review-form-section {
       display: flex;
-      flex-direction: column;
+      justify-content: center;
       align-items: center;
       padding: 2rem;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 20px;
-      margin: 2rem auto;
-      max-width: 1000px;
+      min-height: 60vh;
     }
 
-    #reviews-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-      width: 100%;
-      max-width: 700px;
-    }
-
-    .review-box {
-      width: 100%;
-      max-width: 700px;
-      background: white;
-      border-radius: 18px;
-      padding: 2rem;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      border-left: 4px solid hotpink;
-      transition: all 0.3s ease;
-      margin: 0 auto;
-    }
-
-    .review-box:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
-    }
-
-    .no-reviews, .error-message, .loading-reviews {
-      width: 100%;
+    .form-container {
       max-width: 600px;
-      text-align: center;
-      padding: 3rem 2rem;
-      color: #718096;
-      background: white;
-      border-radius: 18px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      width: 100%;
       margin: 0 auto;
+      background: white;
+      border-radius: 25px;
+      padding: 3rem;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+      text-align: center;
     }
 
-    .loading-reviews {
+    .form-container h3 {
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 1.8rem;
+      color: #333;
+    }
+
+    .form-group {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.8rem;
+      color: #333;
+      font-weight: 600;
       font-size: 1.1rem;
-      color: #666;
+      text-align: center;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      font-family: 'MaruBuri';
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      display: block;
+      padding: 1rem;
+      border: 2px solid #e1e5e9;
+      border-radius: 12px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: hotpink;
+      box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.1);
+    }
+
+    .form-group textarea {
+      height: 120px;
+      resize: vertical;
+      line-height: 1.6;
     }
 
     .star-rating {
@@ -88,6 +102,141 @@
       transform: scale(1.1);
     }
 
+    .rating-text {
+      margin: 0.5rem 0;
+      font-weight: 500;
+      color: #333;
+      text-align: center;
+    }
+
+    .image-upload-area {
+      max-width: 500px;
+      margin: 0 auto;
+      border: 3px dashed #cbd5e0;
+      border-radius: 15px;
+      padding: 2rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      background: #fafbfc;
+      position: relative;
+    }
+
+    .image-upload-area:hover {
+      border-color: hotpink;
+      background: rgba(255, 105, 180, 0.05);
+    }
+
+    .image-upload-area input[type="file"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-placeholder {
+      pointer-events: none;
+    }
+
+    .upload-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #a0aec0;
+    }
+
+    .upload-placeholder p {
+      color: #718096;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .upload-hint {
+      color: #a0aec0;
+      font-size: 0.9rem;
+    }
+
+    #image-preview {
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    #preview-img {
+      max-width: 200px;
+      max-height: 150px;
+      border-radius: 8px;
+    }
+
+    #remove-image {
+      margin-top: 0.5rem;
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .submit-btn {
+      background: linear-gradient(135deg, #ff69b4, #ff1493);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .submit-btn:hover {
+      background: #ff69b4;
+      transform: translateY(-2px);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .loading-spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .reviews-display-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 20px;
+      margin: 2rem auto;
+      max-width: 1000px;
+    }
+
+    .reviews-display-section h3 {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-size: 1.8rem;
+      color: #333;
+    }
+
     .reviews-controls {
       display: flex;
       justify-content: center;
@@ -104,6 +253,98 @@
       background: white;
       font-size: 0.9rem;
       font-family: 'MaruBuri', sans-serif;
+    }
+
+    #reviews-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .review-box {
+      width: 100%;
+      max-width: 700px;
+      background: white;
+      border-radius: 18px;
+      padding: 2rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      border-left: 4px solid hotpink;
+      transition: all 0.3s ease;
+      margin: 0 auto;
+    }
+
+    .review-box:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    }
+
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .review-author {
+      font-weight: 700;
+      color: hotpink;
+      font-size: 1.1rem;
+    }
+
+    .review-date {
+      color: #718096;
+      font-size: 0.9rem;
+    }
+
+    .review-rating {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: #ffd700;
+    }
+
+    .review-content {
+      color: #4a5568;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .review-image-container {
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    .review-image {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+
+    .review-image:hover {
+      transform: scale(1.02);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+
+    .no-reviews, .error-message, .loading-reviews {
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+      padding: 3rem 2rem;
+      color: #718096;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin: 0 auto;
+    }
+
+    .loading-reviews {
+      font-size: 1.1rem;
+      color: #666;
     }
 
     #load-more-btn {
@@ -170,7 +411,7 @@
       justify-content: center;
     }
 
-    .modal-content .review-caption {
+    .modal-caption {
       padding: 1rem;
       text-align: center;
       background: white;
@@ -178,21 +419,16 @@
       color: #333;
     }
 
-    .loading-spinner {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top-color: white;
-      animation: spin 1s ease-in-out infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
     @media (max-width: 768px) {
+      .form-container {
+        padding: 2rem;
+        margin: 1rem;
+      }
+
+      .star {
+        font-size: 1.8rem;
+      }
+
       .reviews-display-section {
         padding: 1rem;
         margin: 1rem;
@@ -200,10 +436,6 @@
 
       .review-box {
         padding: 1.5rem;
-      }
-
-      .star {
-        font-size: 1.8rem;
       }
 
       .reviews-controls {
@@ -229,112 +461,49 @@
     <p>고객님의 소중한 후기를 남겨주세요</p>
   </header>
 
-  <section class="review-form-section" style="display: flex; justify-content: center; padding: 2rem;">
-    <div class="form-container" style="
-      max-width: 600px; 
-      width: 100%; 
-      margin: 0 auto;
-      background: white;
-      border-radius: 25px;
-      padding: 3rem;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-    ">
-      <h3 style="text-align: center; margin-bottom: 2rem; font-size: 1.8rem; color: #333;">후기 작성하기</h3>
+  <section class="review-form-section">
+    <div class="form-container">
+      <h3>후기 작성하기</h3>
       <form id="review-form">
-        <div class="form-group" style="text-align: center; margin-bottom: 1.5rem;">
-          <label for="reviewer" style="display: block; margin-bottom: 0.8rem; color: #333; font-weight: 600; font-size: 1.1rem;">이름</label>
-          <input type="text" id="reviewer" placeholder="이름을 입력해주세요" required style="
-            font-family: 'MaruBuri'; 
-            width: 100%; 
-            max-width: 400px; 
-            margin: 0 auto; 
-            display: block;
-            padding: 1rem;
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-          "/>
+        <div class="form-group">
+          <label for="reviewer">이름</label>
+          <input type="text" id="reviewer" placeholder="이름을 입력해주세요" required />
         </div>
         
-        <div class="form-group" style="text-align: center; margin-bottom: 1.5rem;">
-          <label for="rating" style="display: block; margin-bottom: 0.8rem; color: #333; font-weight: 600; font-size: 1.1rem;">별점</label>
+        <div class="form-group">
+          <label for="rating">별점</label>
           <div class="star-rating" id="star-rating">
           </div>
           <input type="hidden" id="rating" name="rating" required />
-          <p class="rating-text" style="text-align: center; margin: 0.5rem 0; color: #333; font-weight: 500;">별을 클릭하여 평점을 매겨주세요</p>
+          <p class="rating-text">별을 클릭하여 평점을 매겨주세요</p>
         </div>
         
-        <div class="form-group" style="text-align: center; margin-bottom: 1.5rem;">
-          <label for="review-content" style="display: block; margin-bottom: 0.8rem; color: #333; font-weight: 600; font-size: 1.1rem;">후기 내용</label>
-          <textarea id="review-content" placeholder="네일 서비스는 어떠셨나요? 솔직한 후기를 남겨주세요 💖" required style="
-            font-family: 'MaruBuri'; 
-            height: 120px; 
-            resize: vertical; 
-            width: 100%; 
-            max-width: 500px; 
-            margin: 0 auto; 
-            display: block;
-            padding: 1rem;
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
-            font-size: 1rem;
-            line-height: 1.6;
-            transition: all 0.3s ease;
-          "></textarea>
+        <div class="form-group">
+          <label for="review-content">후기 내용</label>
+          <textarea id="review-content" placeholder="네일 서비스는 어떠셨나요? 솔직한 후기를 남겨주세요 💖" required></textarea>
         </div>
         
-        <div class="form-group" style="text-align: center; margin-bottom: 2rem;">
-          <label for="review-image" style="display: block; margin-bottom: 0.8rem; color: #333; font-weight: 600; font-size: 1.1rem;">사진 첨부 (선택사항)</label>
-          <div class="image-upload-area" style="
-            max-width: 500px; 
-            margin: 0 auto;
-            border: 3px dashed #cbd5e0;
-            border-radius: 15px;
-            padding: 2rem;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            background: #fafbfc;
-            position: relative;
-          ">
-            <input type="file" id="review-image" accept="image/*" style="
-              position: absolute;
-              top: 0;
-              left: 0;
-              width: 100%;
-              height: 100%;
-              opacity: 0;
-              cursor: pointer;
-            " />
+        <div class="form-group">
+          <label for="review-image">사진 첨부 (선택사항)</label>
+          <div class="image-upload-area">
+            <input type="file" id="review-image" accept="image/*" />
             <div class="upload-placeholder">
-              <div class="upload-icon" style="font-size: 2.5rem; margin-bottom: 1rem; color: #a0aec0;">📷</div>
-              <p style="color: #718096; font-size: 1rem; margin-bottom: 0.5rem;">네일 사진을 업로드해주세요</p>
-              <span class="upload-hint" style="color: #a0aec0; font-size: 0.9rem;">JPG, PNG, GIF 형식 (최대 5MB)</span>
+              <div class="upload-icon">📷</div>
+              <p>네일 사진을 업로드해주세요</p>
+              <span class="upload-hint">JPG, PNG, GIF 형식 (최대 5MB)</span>
             </div>
           </div>
-          <div id="image-preview" style="display: none; text-align: center; margin-top: 1rem;">
-            <img id="preview-img" alt="미리보기" style="max-width: 200px; max-height: 150px; border-radius: 8px;" />
+          <div id="image-preview" style="display: none;">
+            <img id="preview-img" alt="미리보기" />
             <br>
-            <button type="button" id="remove-image" style="margin-top: 0.5rem; background: #dc2626; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer;">사진 제거</button>
+            <button type="button" id="remove-image">사진 제거</button>
           </div>
         </div>
         
         <div style="text-align: center; margin-top: 2rem;">
-          <button type="submit" id="submit-btn" style="
-            background: linear-gradient(135deg, #ff69b4, #ff1493);
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
-          ">
+          <button type="submit" id="submit-btn" class="submit-btn">
             <span class="btn-text">후기 등록하기</span>
-            <div class="loading-spinner" style="display: none;"></div>
+            <div class="loading-spinner"></div>
           </button>
         </div>
       </form>
@@ -342,7 +511,7 @@
   </section>
 
   <section class="reviews-display-section">
-    <h3 style="text-align: center; margin-bottom: 1rem; font-size: 1.8rem; color: #333;">고객님들의 후기</h3>
+    <h3>고객님들의 후기</h3>
     
     <div class="reviews-controls">
       <div class="reviews-sort">
@@ -406,10 +575,9 @@
     let lastVisible = null;
     let isLoading = false;
     let selectedRating = 0;
-    const REVIEWS_PER_PAGE = 10;
+    const REVIEWS_PER_PAGE = 5;
 
     document.addEventListener("DOMContentLoaded", function() {
-      console.log('Firebase Review 페이지 로드 완료');
       initializeStarRating();
       initializeOtherFeatures();
     });
@@ -468,9 +636,11 @@
         if (index < rating) {
           star.style.opacity = '1';
           star.style.transform = 'scale(1.1)';
+          star.classList.add('active');
         } else {
           star.style.opacity = '0.3';
           star.style.transform = 'scale(1)';
+          star.classList.remove('active');
         }
       });
     }
@@ -492,7 +662,6 @@
 
     async function initializeOtherFeatures() {
       const reviewForm = document.getElementById("review-form");
-      const reviewsContainer = document.getElementById("reviews-container");
       const imageInput = document.getElementById("review-image");
       const sortSelect = document.getElementById("review-sort");
       const loadMoreBtn = document.getElementById("load-more-btn");
@@ -599,14 +768,11 @@
         let imageUrl = null;
 
         if (imageFile) {
-          console.log('이미지 업로드 시작');
           const imageRef = ref(storage, `reviews/${Date.now()}_${imageFile.name}`);
           await uploadBytes(imageRef, imageFile);
           imageUrl = await getDownloadURL(imageRef);
-          console.log('이미지 업로드 완료:', imageUrl);
         }
 
-        console.log('Firestore에 데이터 저장 시작');
         const docRef = await addDoc(collection(db, "reviews"), {
           name,
           content,
@@ -615,7 +781,6 @@
           createdAt: serverTimestamp()
         });
         
-        console.log('문서 저장 완료:', docRef.id);
         alert("후기가 등록되었습니다! 감사합니다 💖");
 
         resetForm();
@@ -739,24 +904,17 @@
           const starsDisplay = '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
 
           const imageHtml = data.imageUrl ? 
-            `<div class="review-image-container" style="text-align: center; margin-top: 1rem;">
-               <img src="${data.imageUrl}" alt="후기 사진" class="review-image" onclick="openImageModal('${data.imageUrl}', '${data.name}님의 후기')" style="
-                 max-width: 100%;
-                 max-height: 300px;
-                 border-radius: 10px;
-                 cursor: pointer;
-                 box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-                 transition: all 0.3s ease;
-               " />
+            `<div class="review-image-container">
+               <img src="${data.imageUrl}" alt="후기 사진" class="review-image" onclick="openImageModal('${data.imageUrl}', '${data.name}님의 후기')" />
              </div>` : '';
 
           reviewBox.innerHTML = `
-            <div class="review-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-              <strong class="review-author" style="font-weight: 700; color: hotpink; font-size: 1.1rem;">👤 ${data.name}</strong>
-              <span class="review-date" style="color: #718096; font-size: 0.9rem;">📅 ${dateString}</span>
+            <div class="review-header">
+              <strong class="review-author">👤 ${data.name}</strong>
+              <span class="review-date">📅 ${dateString}</span>
             </div>
-            <div class="review-rating" style="font-size: 1.2rem; margin-bottom: 1rem; color: #ffd700;">${starsDisplay}</div>
-            <div class="review-content" style="color: #4a5568; line-height: 1.6; margin-bottom: 1.5rem;">${data.content}</div>
+            <div class="review-rating">${starsDisplay}</div>
+            <div class="review-content">${data.content}</div>
             ${imageHtml}
           `;
           
@@ -796,7 +954,7 @@
         <div class="modal-content">
           <span class="close-modal">&times;</span>
           <img src="${imageUrl}" alt="후기 사진 크게보기" />
-          <div class="review-caption">${caption}</div>
+          <div class="modal-caption">${caption}</div>
         </div>
       `;
       
@@ -811,7 +969,6 @@
         if (e.target === modal) closeModal();
       };
       
-      // ESC 키로 닫기
       const escHandler = function(e) {
         if (e.key === 'Escape') {
           closeModal();
@@ -821,7 +978,7 @@
       document.addEventListener('keydown', escHandler);
     };
 
-    console.log('Firebase Review 시스템 초기화 완료');
+    console.log('최적화된 Firebase Review 시스템 초기화 완료');
   </script>
 </body>
 </html>
