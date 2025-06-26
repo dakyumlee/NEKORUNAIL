@@ -22,40 +22,52 @@ const REVIEWS_PER_PAGE = 10;
 
 document.addEventListener("DOMContentLoaded", function() {
   console.log('DOM 로드 완료');
-
+  
   setTimeout(() => {
     initializeStarRating();
     initializeOtherFeatures();
-  }, 100);
+  }, 200);
 });
 
 function initializeStarRating() {
   console.log('별점 초기화 시작');
   
-  const stars = document.querySelectorAll('.star');
+  const starRating = document.getElementById('star-rating');
   const ratingInput = document.getElementById('rating');
   const ratingText = document.querySelector('.rating-text');
   
-  console.log('별 개수:', stars.length);
-  
-  if (stars.length === 0) {
-    console.error('별점 요소를 찾을 수 없습니다');
+  if (!starRating) {
+    console.error('star-rating 요소를 찾을 수 없습니다');
     return;
   }
-
-  stars.forEach(star => {
-    star.replaceWith(star.cloneNode(true));
-  });
   
-  const newStars = document.querySelectorAll('.star');
+  starRating.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const star = document.createElement('span');
+    star.className = 'star';
+    star.setAttribute('data-rating', i);
+    star.setAttribute('tabindex', '0');
+    star.textContent = '⭐';
+    star.style.cursor = 'pointer';
+    star.style.fontSize = '2rem';
+    star.style.opacity = '0.3';
+    star.style.transition = 'all 0.2s ease';
+    star.style.userSelect = 'none';
+    star.style.display = 'inline-block';
+    star.style.padding = '0.2rem';
+    starRating.appendChild(star);
+  }
   
-  newStars.forEach(function(star, index) {
-    const rating = parseInt(star.dataset.rating);
+  const stars = starRating.querySelectorAll('.star');
+  console.log('생성된 별 개수:', stars.length);
+  
+  stars.forEach(function(star, index) {
+    const rating = parseInt(star.getAttribute('data-rating'));
     
     function selectStar() {
       selectedRating = rating;
       if (ratingInput) ratingInput.value = rating;
-      updateStars(newStars, rating);
+      updateStars(stars, rating);
       updateRatingText(ratingText, rating);
       console.log('별점 설정됨:', rating);
     }
@@ -65,15 +77,15 @@ function initializeStarRating() {
       e.stopPropagation();
       selectStar();
     });
-    
-    star.addEventListener('touchstart', function(e) {
+
+    star.addEventListener('touchend', function(e) {
       e.preventDefault();
       e.stopPropagation();
       selectStar();
     });
     
     star.addEventListener('mouseenter', function() {
-      highlightStars(newStars, rating);
+      highlightStars(stars, rating);
     });
     
     star.addEventListener('keydown', function(e) {
@@ -84,32 +96,36 @@ function initializeStarRating() {
     });
   });
 
-  const starRating = document.querySelector('.star-rating');
-  if (starRating) {
-    starRating.addEventListener('mouseleave', function() {
-      updateStars(newStars, selectedRating);
-    });
-  }
+  starRating.addEventListener('mouseleave', function() {
+    updateStars(stars, selectedRating);
+  });
   
   console.log('별점 초기화 완료');
 }
 
 function highlightStars(stars, rating) {
   stars.forEach(function(star, index) {
-    star.classList.remove('active', 'hover');
     if (index < rating) {
-      star.classList.add('hover');
+      star.style.opacity = '0.8';
+      star.style.transform = 'scale(1.15)';
     } else if (index < selectedRating) {
-      star.classList.add('active');
+      star.style.opacity = '1';
+      star.style.transform = 'scale(1.1)';
+    } else {
+      star.style.opacity = '0.3';
+      star.style.transform = 'scale(1)';
     }
   });
 }
 
 function updateStars(stars, rating) {
   stars.forEach(function(star, index) {
-    star.classList.remove('active', 'hover');
     if (index < rating) {
-      star.classList.add('active');
+      star.style.opacity = '1';
+      star.style.transform = 'scale(1.1)';
+    } else {
+      star.style.opacity = '0.3';
+      star.style.transform = 'scale(1)';
     }
   });
 }
@@ -126,7 +142,7 @@ function updateRatingText(ratingText, rating) {
     '⭐⭐⭐⭐⭐ 최고예요!'
   ];
   
-  ratingText.textContent = texts[rating];
+  ratingText.textContent = texts[rating] || texts[0];
 }
 
 async function initializeOtherFeatures() {
@@ -279,6 +295,7 @@ async function handleReviewSubmit() {
 }
 
 function resetForm() {
+
   const reviewForm = document.getElementById("review-form");
   if (reviewForm) reviewForm.reset();
   
