@@ -1,51 +1,29 @@
-let db, storage;
-let collection, addDoc, getDocs, query, orderBy, serverTimestamp, limit, startAfter;
-let ref, uploadBytes, getDownloadURL;
+import { db, storage } from './firebase.js';
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  serverTimestamp,
+  limit,
+  startAfter
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
 
 let lastVisible = null;
 let isLoading = false;
 let selectedRating = 0;
 const REVIEWS_PER_PAGE = 10;
 
-async function initFirebase() {
-  try {
-    const { db: firebaseDb, storage: firebaseStorage } = await import('./firebase.js');
-    db = firebaseDb;
-    storage = firebaseStorage;
-    
-    const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js");
-    collection = firestoreModule.collection;
-    addDoc = firestoreModule.addDoc;
-    getDocs = firestoreModule.getDocs;
-    query = firestoreModule.query;
-    orderBy = firestoreModule.orderBy;
-    serverTimestamp = firestoreModule.serverTimestamp;
-    limit = firestoreModule.limit;
-    startAfter = firestoreModule.startAfter;
-    
-    const storageModule = await import("https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js");
-    ref = storageModule.ref;
-    uploadBytes = storageModule.uploadBytes;
-    getDownloadURL = storageModule.getDownloadURL;
-    
-    return true;
-  } catch (error) {
-    console.error("Firebase 초기화 실패:", error);
-    return false;
-  }
-}
-
-document.addEventListener("DOMContentLoaded", async function() {
+document.addEventListener("DOMContentLoaded", function() {
   console.log('DOM 로드 완료');
-  
   initializeStarRating();
-  
-  const firebaseReady = await initFirebase();
-  if (firebaseReady) {
-    setTimeout(function() {
-      initializeOtherFeatures();
-    }, 100);
-  }
+  initializeOtherFeatures();
 });
 
 function initializeStarRating() {
@@ -65,30 +43,32 @@ function initializeStarRating() {
   stars.forEach(function(star, index) {
     const rating = index + 1;
     
+    function selectStar() {
+      selectedRating = rating;
+      if (ratingInput) ratingInput.value = rating;
+      updateStars(stars, rating);
+      updateRatingText(ratingText, rating);
+      console.log('별점 설정됨:', rating);
+    }
+    
     star.addEventListener('click', function(e) {
       e.preventDefault();
-      e.stopPropagation();
-      console.log('별 클릭:', rating);
-      setRating(rating, stars, ratingInput, ratingText);
+      selectStar();
     });
     
-    star.addEventListener('touchend', function(e) {
+    star.addEventListener('touchstart', function(e) {
       e.preventDefault();
-      e.stopPropagation();
-      console.log('별 터치:', rating);
-      setRating(rating, stars, ratingInput, ratingText);
-    }, { passive: false });
+      selectStar();
+    });
     
     star.addEventListener('mouseenter', function() {
-      if (!('ontouchstart' in window)) {
-        highlightStars(stars, rating);
-      }
+      highlightStars(stars, rating);
     });
     
     star.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        setRating(rating, stars, ratingInput, ratingText);
+        selectStar();
       }
     });
   });
@@ -96,21 +76,11 @@ function initializeStarRating() {
   const starRating = document.querySelector('.star-rating');
   if (starRating) {
     starRating.addEventListener('mouseleave', function() {
-      if (!('ontouchstart' in window)) {
-        updateStars(stars, selectedRating);
-      }
+      updateStars(stars, selectedRating);
     });
   }
   
   console.log('별점 초기화 완료');
-}
-
-function setRating(rating, stars, ratingInput, ratingText) {
-  selectedRating = rating;
-  if (ratingInput) ratingInput.value = rating;
-  updateStars(stars, rating);
-  updateRatingText(ratingText, rating);
-  console.log('별점 설정됨:', rating);
 }
 
 function highlightStars(stars, rating) {
@@ -162,7 +132,11 @@ async function initializeOtherFeatures() {
 
   setupImagePreview(imageInput, imagePreview, previewImg, removeImageBtn);
 
-  await loadReviews(true, reviewsContainer, sortSelect);
+  try {
+    await loadReviews(true, reviewsContainer, sortSelect);
+  } catch (error) {
+    console.error('초기 리뷰 로드 실패:', error);
+  }
 
   if (sortSelect) {
     sortSelect.addEventListener("change", async function() {
@@ -257,19 +231,23 @@ async function handleReviewSubmit() {
     let imageUrl = null;
 
     if (imageFile) {
+      console.log('이미지 업로드 시작');
       const imageRef = ref(storage, `reviews/${Date.now()}_${imageFile.name}`);
       await uploadBytes(imageRef, imageFile);
       imageUrl = await getDownloadURL(imageRef);
+      console.log('이미지 업로드 완료:', imageUrl);
     }
 
-    await addDoc(collection(db, "reviews"), {
+    console.log('Firestore에 데이터 저장 시작');
+    const docRef = await addDoc(collection(db, "reviews"), {
       name,
       content,
       rating,
       imageUrl,
       createdAt: serverTimestamp()
     });
-
+    
+    console.log('문서 저장 완료:', docRef.id);
     alert("후기가 등록되었습니다! 감사합니다 💖");
 
     const reviewForm = document.getElementById("review-form");
@@ -298,7 +276,7 @@ async function handleReviewSubmit() {
 
   } catch (error) {
     console.error("후기 등록 실패:", error);
-    alert("후기 등록 중 오류가 발생했습니다.");
+    alert("후기 등록 중 오류가 발생했습니다: " + error.message);
   } finally {
     if (btnText) btnText.style.display = 'block';
     if (loading) loading.style.display = 'none';
