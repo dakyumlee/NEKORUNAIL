@@ -4,446 +4,65 @@
   <script type="module" src="firebase-init.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>리뷰 - NEKORUNAIL</title>
+  <title>NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    .review-form-section {
-      margin: 0 auto;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 2rem;
-      min-height: 60vh;
-    }
-
-    .form-container {
-      max-width: 600px;
-      width: 100%;
-      margin: 0 auto;
-      background: white;
-      border-radius: 25px;
-      padding: 3rem;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-
-    .form-container h3 {
-      text-align: center;
-      margin-bottom: 2rem;
-      font-size: 1.8rem;
-      color: #333;
-    }
-
-    .form-group {
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 0.8rem;
-      color: #333;
-      font-weight: 600;
-      font-size: 1.1rem;
-      text-align: center;
-    }
-
-    .form-group input,
-    .form-group textarea {
-      font-family: 'MaruBuri';
-      width: 100%;
-      max-width: 500px;
-      margin: 0 auto;
-      display: block;
-      padding: 1rem;
-      border: 2px solid #e1e5e9;
-      border-radius: 12px;
-      font-size: 1rem;
-      transition: all 0.3s ease;
-      box-sizing: border-box;
-    }
-
-    .form-group input:focus,
-    .form-group textarea:focus {
-      outline: none;
-      border-color: hotpink;
-      box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.1);
-    }
-
-    .form-group textarea {
-      height: 120px;
-      resize: vertical;
-      line-height: 1.6;
-    }
-
-    .star-rating {
-      display: flex;
-      gap: 0.3rem;
-      margin: 1rem 0;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .star {
-      font-size: 2rem;
-      cursor: pointer;
-      user-select: none;
-      transition: all 0.2s ease;
-      opacity: 0.3;
-      transform: scale(1);
-      display: inline-block;
-      padding: 0.2rem;
-    }
-
-    .star:hover {
-      transform: scale(1.2);
-    }
-
-    .star.active {
-      opacity: 1;
-      transform: scale(1.1);
-    }
-
-    .rating-text {
-      margin: 0.5rem 0;
-      font-weight: 500;
-      color: #333;
-      text-align: center;
-    }
-
-    .image-upload-area {
-      max-width: 500px;
-      margin: 0 auto;
-      border: 3px dashed #cbd5e0;
-      border-radius: 15px;
-      padding: 2rem;
-      text-align: center;
-      transition: all 0.3s ease;
-      cursor: pointer;
-      background: #fafbfc;
-      position: relative;
-    }
-
-    .image-upload-area:hover {
-      border-color: hotpink;
-      background: rgba(255, 105, 180, 0.05);
-    }
-
-    .image-upload-area input[type="file"] {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      cursor: pointer;
-    }
-
-    .upload-placeholder {
-      pointer-events: none;
-    }
-
-    .upload-icon {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      color: #a0aec0;
-    }
-
-    .upload-placeholder p {
-      color: #718096;
-      font-size: 1rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .upload-hint {
-      color: #a0aec0;
-      font-size: 0.9rem;
-    }
-
-    #image-preview {
-      text-align: center;
-      margin-top: 1rem;
-    }
-
-    #preview-img {
-      max-width: 200px;
-      max-height: 150px;
-      border-radius: 8px;
-    }
-
-    #remove-image {
-      margin-top: 0.5rem;
-      background: #dc2626;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .submit-btn {
-      background: linear-gradient(135deg, #ff69b4, #ff1493);
-      color: white;
-      border: none;
-      padding: 1rem 2rem;
-      border-radius: 50px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .submit-btn:hover {
-      background: #ff69b4;
-      transform: translateY(-2px);
-    }
-
-    .submit-btn:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
-
-    .loading-spinner {
-      display: none;
-      width: 20px;
-      height: 20px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top-color: white;
-      animation: spin 1s ease-in-out infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .reviews-display-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 20px;
-      margin: 2rem auto;
-      max-width: 1000px;
-    }
-
-    .reviews-display-section h3 {
-      text-align: center;
-      margin-bottom: 1rem;
-      font-size: 1.8rem;
-      color: #333;
-    }
-
-    .reviews-controls {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-    }
-
-    .reviews-sort select {
-      padding: 0.5rem 1rem;
-      border: 2px solid #ddd;
-      border-radius: 10px;
-      background: white;
-      font-size: 0.9rem;
-      font-family: 'MaruBuri', sans-serif;
-    }
-
-    #reviews-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-      width: 100%;
-      max-width: 700px;
-    }
-
-    .review-box {
-      width: 100%;
-      max-width: 700px;
-      background: white;
-      border-radius: 18px;
-      padding: 2rem;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      border-left: 4px solid hotpink;
-      transition: all 0.3s ease;
-      margin: 0 auto;
-    }
-
-    .review-box:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
-    }
-
-    .review-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .review-author {
-      font-weight: 700;
-      color: hotpink;
-      font-size: 1.1rem;
-    }
-
-    .review-date {
-      color: #718096;
-      font-size: 0.9rem;
-    }
-
-    .review-rating {
-      font-size: 1.2rem;
-      margin-bottom: 1rem;
-      color: #ffd700;
-    }
-
-    .review-content {
-      color: #4a5568;
-      line-height: 1.6;
-      margin-bottom: 1.5rem;
-    }
-
-    .review-image-container {
-      text-align: center;
-      margin-top: 1rem;
-    }
-
-    .review-image {
-      max-width: 100%;
-      max-height: 300px;
-      border-radius: 10px;
-      cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      transition: all 0.3s ease;
-    }
-
-    .review-image:hover {
-      transform: scale(1.02);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-    }
-
-    .no-reviews, .error-message, .loading-reviews {
-      width: 100%;
-      max-width: 600px;
-      text-align: center;
-      padding: 3rem 2rem;
-      color: #718096;
-      background: white;
-      border-radius: 18px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      margin: 0 auto;
-    }
-
-    .loading-reviews {
-      font-size: 1.1rem;
-      color: #666;
-    }
-
-    #load-more-btn {
-      background: hotpink;
-      color: white;
-      border: none;
-      padding: 1rem 2rem;
-      border-radius: 50px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-top: 2rem;
-      display: none;
-    }
-
-    #load-more-btn:hover {
-      background: #ff69b4;
-      transform: translateY(-2px);
-    }
-
-    .image-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      cursor: pointer;
-    }
-
-    .modal-content {
-      position: relative;
-      max-width: 90vw;
-      max-height: 90vh;
-      background: white;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    .modal-content img {
-      max-width: 100%;
-      max-height: 80vh;
-      display: block;
-    }
-
-    .close-modal {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 2rem;
-      color: white;
-      cursor: pointer;
-      z-index: 10001;
-      background: rgba(0,0,0,0.5);
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-caption {
-      padding: 1rem;
-      text-align: center;
-      background: white;
-      font-weight: 600;
-      color: #333;
-    }
-
-    @media (max-width: 768px) {
-      .form-container {
-        padding: 2rem;
-        margin: 1rem;
-      }
-
-      .star {
-        font-size: 1.8rem;
-      }
-
-      .reviews-display-section {
-        padding: 1rem;
-        margin: 1rem;
-      }
-
-      .review-box {
-        padding: 1.5rem;
-      }
-
-      .reviews-controls {
-        flex-direction: column;
-        gap: 0.5rem;
-      }
+    .review-form-section { margin:0 auto; display:flex; justify-content:center; align-items:center; padding:2rem; min-height:60vh; }
+    .form-container { max-width:600px; width:100%; margin:0 auto; background:white; border-radius:25px; padding:3rem; box-shadow:0 15px 35px rgba(0,0,0,0.1); text-align:center; }
+    .form-container h3 { margin-bottom:2rem; font-size:1.8rem; color:#333; }
+    .form-group { margin-bottom:1.5rem; }
+    .form-group label { display:block; margin-bottom:0.8rem; color:#333; font-weight:600; font-size:1.1rem; }
+    .form-group input, .form-group textarea { width:100%; max-width:500px; margin:0 auto; display:block; padding:1rem; border:2px solid #e1e5e9; border-radius:12px; font-size:1rem; transition:all .3s ease; box-sizing:border-box; }
+    .form-group input:focus, .form-group textarea:focus { outline:none; border-color:hotpink; box-shadow:0 0 0 3px rgba(255,105,180,0.1); }
+    .form-group textarea { height:120px; resize:vertical; line-height:1.6; }
+    .star-rating { display:flex; gap:.3rem; margin:1rem 0; justify-content:center; }
+    .star { font-size:2rem; cursor:pointer; user-select:none; opacity:.3; transition:all .2s ease; display:inline-block; padding:.2rem; }
+    .star:hover { transform:scale(1.2); }
+    .star.active { opacity:1; transform:scale(1.1); }
+    .rating-text { margin:.5rem 0; font-weight:500; color:#333; text-align:center; }
+    .image-upload-area { max-width:500px; margin:0 auto; border:3px dashed #cbd5e0; border-radius:15px; padding:2rem; text-align:center; position:relative; background:#fafbfc; cursor:pointer; transition:all .3s ease; }
+    .image-upload-area:hover { border-color:hotpink; background:rgba(255,105,180,0.05); }
+    .image-upload-area input[type="file"] { position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+    .upload-placeholder { pointer-events:none; }
+    .upload-icon { font-size:2.5rem; margin-bottom:1rem; color:#a0aec0; }
+    .upload-placeholder p { color:#718096; font-size:1rem; margin-bottom:.5rem; }
+    .upload-hint { color:#a0aec0; font-size:.9rem; }
+    #image-preview { text-align:center; margin-top:1rem; display:none; }
+    #preview-img { max-width:200px; max-height:150px; border-radius:8px; }
+    #remove-image { margin-top:.5rem; background:#dc2626; color:#fff; border:none; padding:.5rem 1rem; border-radius:5px; cursor:pointer; }
+    .submit-btn { background:linear-gradient(135deg,#ff69b4,#ff1493); color:#fff; border:none; padding:1rem 2rem; border-radius:50px; font-size:1.1rem; font-weight:600; cursor:pointer; box-shadow:0 4px 15px rgba(255,105,180,0.4); display:inline-flex; align-items:center; gap:.5rem; transition:all .3s ease; }
+    .submit-btn:hover { background:#ff69b4; transform:translateY(-2px); }
+    .submit-btn:disabled { opacity:.7; cursor:not-allowed; }
+    .loading-spinner { display:none; width:20px; height:20px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; border-top-color:#fff; animation:spin 1s ease-in-out infinite; }
+    @keyframes spin { to{transform:rotate(360deg);} }
+    .reviews-display-section { display:flex; flex-direction:column; align-items:center; padding:2rem; background:rgba(255,255,255,0.9); border-radius:20px; margin:2rem auto; max-width:1000px; }
+    .reviews-controls { display:flex; justify-content:center; gap:1rem; margin-bottom:2rem; flex-wrap:wrap; }
+    .reviews-sort select { padding:.5rem 1rem; border:2px solid #ddd; border-radius:10px; background:#fff; font-size:.9rem; }
+    #reviews-container { display:flex; flex-direction:column; align-items:center; gap:1.5rem; width:100%; max-width:700px; }
+    .review-box { width:100%; max-width:700px; background:#fff; border-radius:18px; padding:2rem; box-shadow:0 8px 20px rgba(0,0,0,0.1); border-left:4px solid hotpink; transition:all .3s ease; }
+    .review-box:hover { transform:translateY(-3px); box-shadow:0 12px 30px rgba(0,0,0,0.15); }
+    .review-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+    .review-author { font-weight:700; color:hotpink; font-size:1.1rem; }
+    .review-date { color:#718096; font-size:.9rem; }
+    .review-rating { font-size:1.2rem; margin-bottom:1rem; color:#ffd700; }
+    .review-content { color:#4a5568; line-height:1.6; margin-bottom:1.5rem; }
+    .review-image-container { text-align:center; margin-top:1rem; }
+    .review-image { max-width:100%; max-height:300px; border-radius:10px; cursor:pointer; box-shadow:0 4px 8px rgba(0,0,0,0.1); transition:all .3s ease; }
+    .review-image:hover { transform:scale(1.02); box-shadow:0 6px 12px rgba(0,0,0,0.15); }
+    .no-reviews, .error-message, .loading-reviews { width:100%; max-width:600px; text-align:center; padding:3rem 2rem; color:#718096; background:#fff; border-radius:18px; box-shadow:0 4px 8px rgba(0,0,0,0.1); margin:0 auto; }
+    #load-more-btn { background:hotpink; color:#fff; border:none; padding:1rem 2rem; border-radius:50px; font-weight:600; cursor:pointer; transition:all .3s ease; margin-top:2rem; display:none; }
+    #load-more-btn:hover { background:#ff69b4; transform:translateY(-2px); }
+    .image-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:10000; }
+    .modal-content { position:relative; max-width:90vw; max-height:90vh; background:#fff; border-radius:10px; overflow:hidden; }
+    .modal-content img { max-width:100%; max-height:80vh; display:block; }
+    .close-modal { position:absolute; top:10px; right:15px; font-size:2rem; color:#fff; cursor:pointer; background:rgba(0,0,0,0.5); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+    .modal-caption { padding:1rem; text-align:center; background:#fff; font-weight:600; color:#333; }
+    @media (max-width:768px) {
+      .form-container { padding:2rem; margin:1rem; }
+      .star { font-size:1.8rem; }
+      .reviews-display-section { padding:1rem; margin:1rem; }
+      .review-box { padding:1.5rem; }
+      .reviews-controls { flex-direction:column; gap:.5rem; }
     }
   </style>
 </head>
@@ -458,7 +77,6 @@
         <li><a href="come.html">찾아오시는 길</a></li>
       </ul>
     </nav>
-    <br><br>
     <h1>리뷰</h1>
     <p>고객님의 소중한 후기를 남겨주세요</p>
   </header>
@@ -471,20 +89,16 @@
           <label for="reviewer">이름</label>
           <input type="text" id="reviewer" placeholder="이름을 입력해주세요" required />
         </div>
-        
         <div class="form-group">
           <label for="rating">별점</label>
-          <div class="star-rating" id="star-rating">
-          </div>
+          <div class="star-rating" id="star-rating"></div>
           <input type="hidden" id="rating" name="rating" required />
           <p class="rating-text">별을 클릭하여 평점을 매겨주세요</p>
         </div>
-        
         <div class="form-group">
           <label for="review-content">후기 내용</label>
-          <textarea id="review-content" placeholder="네일 서비스는 어떠셨나요? 솔직한 후기를 남겨주세요 💖" required></textarea>
+          <textarea id="review-content" placeholder="솔직한 후기를 남겨주세요 💖" required></textarea>
         </div>
-        
         <div class="form-group">
           <label for="review-image">사진 첨부 (선택사항)</label>
           <div class="image-upload-area">
@@ -492,17 +106,16 @@
             <div class="upload-placeholder">
               <div class="upload-icon">📷</div>
               <p>네일 사진을 업로드해주세요</p>
-              <span class="upload-hint">JPG, PNG, GIF 형식 (최대 5MB)</span>
+              <span class="upload-hint">JPG, PNG, GIF (최대 5MB)</span>
             </div>
           </div>
-          <div id="image-preview" style="display: none;">
+          <div id="image-preview">
             <img id="preview-img" alt="미리보기" />
             <br>
             <button type="button" id="remove-image">사진 제거</button>
           </div>
         </div>
-        
-        <div style="text-align: center; margin-top: 2rem;">
+        <div style="text-align:center; margin-top:2rem;">
           <button type="submit" id="submit-btn" class="submit-btn">
             <span class="btn-text">후기 등록하기</span>
             <div class="loading-spinner"></div>
@@ -514,10 +127,9 @@
 
   <section class="reviews-display-section">
     <h3>고객님들의 후기</h3>
-    
     <div class="reviews-controls">
       <div class="reviews-sort">
-        <label for="review-sort" style="margin-right: 0.5rem; font-weight: 600;">정렬:</label>
+        <label for="review-sort">정렬:</label>
         <select id="review-sort">
           <option value="newest">최신순</option>
           <option value="oldest">오래된순</option>
@@ -526,13 +138,9 @@
         </select>
       </div>
     </div>
-
     <div id="reviews-container">
-      <div class="loading-reviews">
-        <p>후기를 불러오는 중...</p>
-      </div>
+      <div class="loading-reviews"><p>후기를 불러오는 중...</p></div>
     </div>
-
     <button id="load-more-btn">더 많은 후기 보기</button>
   </section>
 
@@ -542,22 +150,12 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { 
-      getFirestore, 
-      collection, 
-      addDoc, 
-      getDocs, 
-      query, 
-      orderBy, 
-      serverTimestamp, 
-      limit, 
-      startAfter 
+    import {
+      getFirestore, collection, addDoc, getDocs,
+      query, orderBy, limit, startAfter, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-    import { 
-      getStorage, 
-      ref, 
-      uploadBytes, 
-      getDownloadURL 
+    import {
+      getStorage, ref, uploadBytes, getDownloadURL
     } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
 
     const firebaseConfig = {
@@ -569,418 +167,154 @@
       appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
       measurementId: "G-MW8CBHGSLG"
     };
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const storage = getStorage(app);
 
-    let lastVisible = null;
-    let isLoading = false;
-    let selectedRating = 0;
+    let lastVisible = null, isLoading = false, selectedRating = 0;
     const REVIEWS_PER_PAGE = 5;
 
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", () => {
       initializeStarRating();
-      initializeOtherFeatures();
+      setupImagePreview();
+      initializeReviewFlow();
     });
 
     function initializeStarRating() {
       const starRating = document.getElementById('star-rating');
       const ratingInput = document.getElementById('rating');
       const ratingText = document.querySelector('.rating-text');
-      
-      if (!starRating) return;
-      
-      starRating.innerHTML = `
-        <span class="star" data-rating="1">⭐</span>
-        <span class="star" data-rating="2">⭐</span>
-        <span class="star" data-rating="3">⭐</span>
-        <span class="star" data-rating="4">⭐</span>
-        <span class="star" data-rating="5">⭐</span>
-      `;
-      
+      starRating.innerHTML = [1,2,3,4,5].map(n => `<span class="star" data-rating="${n}">⭐</span>`).join('');
       const stars = starRating.querySelectorAll('.star');
-      
-      stars.forEach(function(star) {
-        const rating = parseInt(star.getAttribute('data-rating'));
-        
-        star.addEventListener('click', function() {
-          selectedRating = rating;
-          if (ratingInput) ratingInput.value = rating;
-          updateStars(stars, rating);
-          updateRatingText(ratingText, rating);
+      stars.forEach(star => {
+        const r = +star.dataset.rating;
+        star.addEventListener('click', () => {
+          selectedRating = r;
+          ratingInput.value = r;
+          updateStars(stars, r);
+          updateRatingText(ratingText, r);
         });
-        
-        star.addEventListener('mouseenter', function() {
-          highlightStars(stars, rating);
-        });
+        star.addEventListener('mouseenter', () => highlightStars(stars, r));
       });
-
-      starRating.addEventListener('mouseleave', function() {
-        updateStars(stars, selectedRating);
-      });
+      starRating.addEventListener('mouseleave', () => updateStars(stars, selectedRating));
     }
 
     function highlightStars(stars, rating) {
-      stars.forEach(function(star, index) {
-        if (index < rating) {
-          star.style.opacity = '0.8';
-          star.style.transform = 'scale(1.15)';
-        } else {
-          star.style.opacity = '0.3';
-          star.style.transform = 'scale(1)';
-        }
+      stars.forEach((s,i) => {
+        s.style.opacity = i < rating ? '0.8' : '0.3';
+        s.style.transform = i < rating ? 'scale(1.15)' : 'scale(1)';
       });
     }
 
     function updateStars(stars, rating) {
-      stars.forEach(function(star, index) {
-        if (index < rating) {
-          star.style.opacity = '1';
-          star.style.transform = 'scale(1.1)';
-          star.classList.add('active');
-        } else {
-          star.style.opacity = '0.3';
-          star.style.transform = 'scale(1)';
-          star.classList.remove('active');
-        }
+      stars.forEach((s,i) => {
+        if(i < rating) { s.classList.add('active'); s.style.opacity='1'; s.style.transform='scale(1.1)'; }
+        else { s.classList.remove('active'); s.style.opacity='0.3'; s.style.transform='scale(1)'; }
       });
     }
 
-    function updateRatingText(ratingText, rating) {
-      if (!ratingText) return;
-      
-      const texts = [
-        '별을 클릭하여 평점을 매겨주세요',
-        '⭐ 별로예요',
-        '⭐⭐ 그저 그래요',
-        '⭐⭐⭐ 보통이에요',
-        '⭐⭐⭐⭐ 좋아요',
-        '⭐⭐⭐⭐⭐ 최고예요!'
-      ];
-      
-      ratingText.textContent = texts[rating] || texts[0];
-    }
-
-    async function initializeOtherFeatures() {
-      const reviewForm = document.getElementById("review-form");
-      const imageInput = document.getElementById("review-image");
-      const sortSelect = document.getElementById("review-sort");
-      const loadMoreBtn = document.getElementById("load-more-btn");
-
-      setupImagePreview();
-
-      try {
-        await loadReviews(true);
-      } catch (error) {
-        console.error('초기 리뷰 로드 실패:', error);
-      }
-
-      if (sortSelect) {
-        sortSelect.addEventListener("change", async function() {
-          lastVisible = null;
-          await loadReviews(true);
-        });
-      }
-
-      if (loadMoreBtn) {
-        loadMoreBtn.addEventListener("click", function() {
-          loadReviews(false);
-        });
-      }
-
-      if (reviewForm) {
-        reviewForm.addEventListener("submit", async function(e) {
-          e.preventDefault();
-          await handleReviewSubmit();
-        });
-      }
+    function updateRatingText(el, rating) {
+      const texts = ['별을 클릭하여 평점을 매겨주세요','별로예요','그저 그래요','보통이에요','좋아요','최고예요!'];
+      el.textContent = texts[rating]||texts[0];
     }
 
     function setupImagePreview() {
-      const imageInput = document.getElementById("review-image");
-      const imagePreview = document.getElementById("image-preview");
-      const previewImg = document.getElementById("preview-img");
-      const removeImageBtn = document.getElementById("remove-image");
-      
-      if (!imageInput) return;
-      
-      imageInput.addEventListener("change", function(e) {
-        const file = e.target.files[0];
-        if (file) {
-          if (file.size > 5 * 1024 * 1024) {
-            alert("파일 크기는 5MB 이하여야 합니다.");
-            imageInput.value = '';
-            return;
-          }
-
-          if (!file.type.startsWith('image/')) {
-            alert("이미지 파일만 업로드 가능합니다.");
-            imageInput.value = '';
-            return;
-          }
-
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            if (previewImg) previewImg.src = e.target.result;
-            if (imagePreview) imagePreview.style.display = 'block';
-            const uploadArea = document.querySelector('.image-upload-area');
-            if (uploadArea) uploadArea.style.display = 'none';
-          };
-          reader.readAsDataURL(file);
-        }
+      const imgInput = document.getElementById("review-image");
+      const preview = document.getElementById("image-preview");
+      const img = document.getElementById("preview-img");
+      const removeBtn = document.getElementById("remove-image");
+      imgInput.addEventListener("change", e => {
+        const f = e.target.files[0];
+        if(!f|| !f.type.startsWith("image/")) return alert("이미지 파일만 가능합니다");
+        if(f.size>5*1024*1024) return alert("5MB 이하만 가능");
+        const fr=new FileReader();
+        fr.onload=e=>{ img.src=e.target.result; preview.style.display='block'; }
+        fr.readAsDataURL(f);
       });
-
-      if (removeImageBtn) {
-        removeImageBtn.addEventListener("click", function() {
-          imageInput.value = '';
-          if (imagePreview) imagePreview.style.display = 'none';
-          const uploadArea = document.querySelector('.image-upload-area');
-          if (uploadArea) uploadArea.style.display = 'block';
-        });
-      }
+      removeBtn.addEventListener("click",()=>{
+        imgInput.value=''; preview.style.display='none';
+      });
     }
 
-    async function handleReviewSubmit() {
+    function initializeReviewFlow() {
+      document.getElementById("review-sort").addEventListener("change", () => { lastVisible=null; loadReviews(true); });
+      document.getElementById("load-more-btn").addEventListener("click", () => loadReviews(false));
+      document.getElementById("review-form").addEventListener("submit", async e => { e.preventDefault(); await submitReview(); });
+      loadReviews(true);
+    }
+
+    async function submitReview() {
       const name = document.getElementById("reviewer").value.trim();
       const content = document.getElementById("review-content").value.trim();
-      const rating = selectedRating;
-      const imageInput = document.getElementById("review-image");
-      const imageFile = imageInput ? imageInput.files[0] : null;
-      
-      if (!name || !content) {
-        alert("이름과 후기 내용을 입력해주세요.");
-        return;
-      }
-
-      if (!rating || rating < 1 || rating > 5) {
-        alert("별점을 선택해주세요.");
-        return;
-      }
-
-      const submitBtn = document.getElementById("submit-btn");
-      const btnText = submitBtn.querySelector('.btn-text');
-      const loading = submitBtn.querySelector('.loading-spinner');
-
+      if(!name||!content||selectedRating<1) return alert("모든 항목을 채워주세요");
+      const btn = document.getElementById("submit-btn");
+      const txt = btn.querySelector('.btn-text');
+      const spin = btn.querySelector('.loading-spinner');
+      txt.style.display='none'; spin.style.display='inline-block'; btn.disabled=true;
       try {
-        if (btnText) btnText.style.display = 'none';
-        if (loading) loading.style.display = 'inline-block';
-        if (submitBtn) submitBtn.disabled = true;
-
         let imageUrl = null;
-
-        if (imageFile) {
-          const imageRef = ref(storage, `reviews/${Date.now()}_${imageFile.name}`);
-          await uploadBytes(imageRef, imageFile);
-          imageUrl = await getDownloadURL(imageRef);
+        const file = document.getElementById("review-image").files[0];
+        if(file){
+          const r = ref(storage, `reviews/${Date.now()}_${file.name}`);
+          await uploadBytes(r, file);
+          imageUrl = await getDownloadURL(r);
         }
+        await addDoc(collection(db,"reviews"), { name, content, rating:selectedRating, imageUrl, createdAt: serverTimestamp() });
+        alert("후기 등록 완료!");
+        document.getElementById("review-form").reset();
+        selectedRating=0; updateStars(document.querySelectorAll('.star'),0); updateRatingText(document.querySelector('.rating-text'),0);
+        lastVisible=null; loadReviews(true);
+      } catch(err){ console.error(err); alert("등록 실패"); }
+      finally{ txt.style.display='inline'; spin.style.display='none'; btn.disabled=false; }
+    }
 
-        const docRef = await addDoc(collection(db, "reviews"), {
-          name,
-          content,
-          rating,
-          imageUrl,
-          createdAt: serverTimestamp()
-        });
-        
-        alert("후기가 등록되었습니다! 감사합니다 💖");
-
-        resetForm();
-        
-        lastVisible = null;
-        await loadReviews(true);
-
-      } catch (error) {
-        console.error("후기 등록 실패:", error);
-        alert("후기 등록 중 오류가 발생했습니다: " + error.message);
-      } finally {
-        if (btnText) btnText.style.display = 'inline';
-        if (loading) loading.style.display = 'none';
-        if (submitBtn) submitBtn.disabled = false;
+    async function loadReviews(reset) {
+      if(isLoading) return; isLoading=true;
+      const cont = document.getElementById("reviews-container"), btn = document.getElementById("load-more-btn");
+      if(reset) { cont.innerHTML='<div class="loading-reviews"><p>로딩 중…</p></div>'; lastVisible=null; }
+      const sort = document.getElementById("review-sort").value;
+      let field='createdAt', dir='desc';
+      if(sort==='oldest') dir='asc';
+      if(sort==='highest'){ field='rating'; dir='desc'; }
+      if(sort==='lowest'){ field='rating'; dir='asc'; }
+      let q = reset
+        ? query(collection(db,"reviews"), orderBy(field,dir), limit(REVIEWS_PER_PAGE))
+        : query(collection(db,"reviews"), orderBy(field,dir), startAfter(lastVisible), limit(REVIEWS_PER_PAGE));
+      const snap = await getDocs(q);
+      if(reset) cont.innerHTML='';
+      if(snap.empty && reset){
+        cont.innerHTML='<div class="no-reviews"><p>등록된 후기가 없습니다.</p><p>첫 후기를 남겨보세요!</p></div>';
+        btn.style.display='none'; isLoading=false; return;
       }
+      snap.forEach(doc => {
+        const d=doc.data();
+        const date = d.createdAt?.toDate().toLocaleDateString('ko-KR')||'';
+        const stars = '⭐'.repeat(d.rating)+'☆'.repeat(5-d.rating);
+        const imgHtml = d.imageUrl?`<div class="review-image-container"><img src="${d.imageUrl}" class="review-image" onclick="openImageModal('${d.imageUrl}','${d.name}님의 후기')" /></div>`:'';
+        const box=document.createElement('div'); box.className='review-box';
+        box.innerHTML=`
+          <div class="review-header"><strong class="review-author">${d.name}</strong><span class="review-date">${date}</span></div>
+          <div class="review-rating">${stars}</div>
+          <div class="review-content">${d.content}</div>
+          ${imgHtml}
+        `;
+        cont.appendChild(box);
+        lastVisible=doc;
+      });
+      btn.style.display = snap.docs.length===REVIEWS_PER_PAGE ? 'block' : 'none';
+      isLoading=false;
     }
 
-    function resetForm() {
-      const reviewForm = document.getElementById("review-form");
-      if (reviewForm) reviewForm.reset();
-      
-      selectedRating = 0;
-      const ratingInput = document.getElementById("rating");
-      if (ratingInput) ratingInput.value = '';
-      
-      const stars = document.querySelectorAll('.star');
-      updateStars(stars, 0);
-      
-      const ratingText = document.querySelector('.rating-text');
-      updateRatingText(ratingText, 0);
-      
-      const imagePreview = document.getElementById("image-preview");
-      if (imagePreview) imagePreview.style.display = 'none';
-      
-      const uploadArea = document.querySelector('.image-upload-area');
-      if (uploadArea) uploadArea.style.display = 'block';
-    }
-
-    async function loadReviews(reset = false) {
-      if (isLoading) return;
-      isLoading = true;
-
-      const reviewsContainer = document.getElementById("reviews-container");
-      const loadMoreBtn = document.getElementById("load-more-btn");
-
-      try {
-        if (reset) {
-          if (reviewsContainer) {
-            reviewsContainer.innerHTML = '<div class="loading-reviews">후기를 불러오는 중...</div>';
-          }
-          lastVisible = null;
-        }
-
-        const sortSelect = document.getElementById("review-sort");
-        const sortValue = sortSelect ? sortSelect.value : 'newest';
-        let orderField = 'createdAt';
-        let orderDirection = 'desc';
-
-        switch (sortValue) {
-          case 'oldest':
-            orderDirection = 'asc';
-            break;
-          case 'highest':
-            orderField = 'rating';
-            orderDirection = 'desc';
-            break;
-          case 'lowest':
-            orderField = 'rating';
-            orderDirection = 'asc';
-            break;
-        }
-        
-        let q;
-        if (lastVisible) {
-          q = query(
-            collection(db, "reviews"), 
-            orderBy(orderField, orderDirection),
-            startAfter(lastVisible),
-            limit(REVIEWS_PER_PAGE)
-          );
-        } else {
-          q = query(
-            collection(db, "reviews"), 
-            orderBy(orderField, orderDirection),
-            limit(REVIEWS_PER_PAGE)
-          );
-        }
-
-        const snapshot = await getDocs(q);
-
-        if (reset && reviewsContainer) {
-          reviewsContainer.innerHTML = '';
-        }
-
-        if (snapshot.empty && reset) {
-          if (reviewsContainer) {
-            reviewsContainer.innerHTML = `
-              <div class="no-reviews">
-                <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #4a5568;">아직 등록된 후기가 없습니다.</p>
-                <p style="font-size: 1rem; color: hotpink;">첫 번째 후기를 남겨보세요! ✨</p>
-              </div>
-            `;
-          }
-          if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-          return;
-        }
-
-        snapshot.forEach(function(doc) {
-          const data = doc.data();
-          const reviewBox = document.createElement("div");
-          reviewBox.className = "review-box";
-          
-          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
-          const dateString = createdAt.toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-
-          const rating = data.rating || 5;
-          const starsDisplay = '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
-
-          const imageHtml = data.imageUrl ? 
-            `<div class="review-image-container">
-               <img src="${data.imageUrl}" alt="후기 사진" class="review-image" onclick="openImageModal('${data.imageUrl}', '${data.name}님의 후기')" />
-             </div>` : '';
-
-          reviewBox.innerHTML = `
-            <div class="review-header">
-              <strong class="review-author">👤 ${data.name}</strong>
-              <span class="review-date">📅 ${dateString}</span>
-            </div>
-            <div class="review-rating">${starsDisplay}</div>
-            <div class="review-content">${data.content}</div>
-            ${imageHtml}
-          `;
-          
-          if (reviewsContainer) {
-            reviewsContainer.appendChild(reviewBox);
-          }
-          lastVisible = doc;
-        });
-
-        if (loadMoreBtn) {
-          if (snapshot.docs.length === REVIEWS_PER_PAGE) {
-            loadMoreBtn.style.display = 'block';
-          } else {
-            loadMoreBtn.style.display = 'none';
-          }
-        }
-
-      } catch (error) {
-        console.error("후기 로드 실패:", error);
-        if (reset && reviewsContainer) {
-          reviewsContainer.innerHTML = `
-            <div class="error-message">
-              <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #dc2626;">후기를 불러오는데 실패했습니다.</p>
-              <p style="color: #666;">잠시 후 다시 시도해주세요.</p>
-            </div>
-          `;
-        }
-      } finally {
-        isLoading = false;
-      }
-    }
-
-    window.openImageModal = function(imageUrl, caption) {
-      const modal = document.createElement('div');
-      modal.className = 'image-modal';
-      modal.innerHTML = `
-        <div class="modal-content">
-          <span class="close-modal">&times;</span>
-          <img src="${imageUrl}" alt="후기 사진 크게보기" />
-          <div class="modal-caption">${caption}</div>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-      
-      const closeModal = function() {
-        document.body.removeChild(modal);
-      };
-      
-      modal.querySelector('.close-modal').onclick = closeModal;
-      modal.onclick = function(e) {
-        if (e.target === modal) closeModal();
-      };
-      
-      const escHandler = function(e) {
-        if (e.key === 'Escape') {
-          closeModal();
-          document.removeEventListener('keydown', escHandler);
-        }
-      };
-      document.addEventListener('keydown', escHandler);
+    window.openImageModal = (url,cap) => {
+      const m=document.createElement('div'); m.className='image-modal';
+      m.innerHTML=`<div class="modal-content"><span class="close-modal">&times;</span><img src="${url}" /><div class="modal-caption">${cap}</div></div>`;
+      document.body.appendChild(m);
+      m.querySelector('.close-modal').onclick=()=>m.remove();
+      m.onclick=e=>{ if(e.target===m) m.remove(); };
+      document.addEventListener('keydown',e=>{ if(e.key==='Escape') m.remove(); });
     };
 
-    console.log('최적화된 Firebase Review 시스템 초기화 완료');
+    console.log('리뷰 페이지 Firebase 로직 초기화 완료');
   </script>
 </body>
 </html>

@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <script type="module" src="firebase-init.js"></script>
-
-  <meta charset="UTF-8">
+  <meta charset="UTF-8"/>
   <title>갤러리 - NEKORUNAIL</title>
-  <link rel="stylesheet" href="style.css">
-  <script type="module" src="optimized-firebase.js"></script>
+  <link rel="stylesheet" href="style.css"/>
+  <script type="module" src="firebase-init.js"></script>
   <style>
     .gallery-container {
       max-width: 1200px;
@@ -212,8 +210,6 @@
       }
     }
   </style>
-</head>
-<body>
   <header class="hero">
     <nav>
       <ul>
@@ -244,95 +240,43 @@
   </footer>
 
   <script>
-    let lastVisible = null;
     let isLoading = false;
-    const ITEMS_PER_PAGE = 6;
-
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener("DOMContentLoaded", () => {
       loadGallery();
-      
-      const loadMoreBtn = document.getElementById('load-more-btn');
-      if (loadMoreBtn) {
-        loadMoreBtn.addEventListener('click', () => loadGallery(false));
-      }
+      const btn = document.getElementById("load-more-btn");
+      if (btn) btn.addEventListener("click", () => loadGallery());
     });
-
-    async function loadGallery(reset = true) {
+    async function loadGallery() {
       if (isLoading) return;
       isLoading = true;
-
-      const gallery = document.getElementById("gallery-show");
-      const loadMoreBtn = document.getElementById('load-more-btn');
-
-      if (reset) {
-        gallery.innerHTML = `
-          <div class="loading-gallery">
-            <div class="loading-spinner"></div>
-            <p>갤러리를 불러오는 중...</p>
-          </div>
-        `;
-      }
-
+      const container = document.getElementById("gallery-show");
+      container.innerHTML = `<div class="loading-gallery"><div class="loading-spinner"></div><p>갤러리를 불러오는 중...</p></div>`;
       try {
-        if (window.optimizedGalleryLoad) {
-          await window.optimizedGalleryLoad(reset, ITEMS_PER_PAGE);
-        } else {
-          gallery.innerHTML = `
-            <div class="error-gallery">
-              <h3>갤러리 로드 실패</h3>
-              <p>최적화된 시스템을 로드할 수 없습니다.</p>
-            </div>
-          `;
-        }
-      } catch (error) {
-        console.error("갤러리 로드 실패:", error);
-        if (reset) {
-          gallery.innerHTML = `
-            <div class="error-gallery">
-              <h3>갤러리 로드 실패</h3>
-              <p>오류가 발생했습니다. 잠시 후 새로고침해주세요.</p>
-            </div>
-          `;
-        }
+        const items = await window.loadGalleryImages();
+        container.innerHTML = items.map(item => `
+          <div class="gallery-card">
+            <img src="${item.imageUrl}" alt="${item.caption||''}" />
+            ${ item.caption ? `<div class="info"><h4>${item.caption}</h4></div>` : '' }
+          </div>
+        `).join("");
+        const loadMore = document.getElementById("load-more-btn");
+        if (loadMore) loadMore.style.display = "none";
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div class="error-gallery"><h3>갤러리 로드 실패</h3><p>잠시 후 새로고침해주세요.</p></div>`;
       } finally {
         isLoading = false;
       }
     }
-
-    function openImageModal(imageUrl, caption) {
-      const modal = document.createElement('div');
-      modal.className = 'image-modal';
-      modal.innerHTML = `
-        <div class="modal-content">
-          <span class="close-modal">&times;</span>
-          <img src="${imageUrl}" alt="${caption}" loading="lazy" />
-          <div class="modal-caption">
-            <h3>${caption}</h3>
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-      
-      const closeModal = function() {
-        document.body.removeChild(modal);
-      };
-      
-      modal.querySelector('.close-modal').onclick = closeModal;
-      modal.onclick = function(e) {
-        if (e.target === modal) closeModal();
-      };
-      
-      const escHandler = function(e) {
-        if (e.key === 'Escape') {
-          closeModal();
-          document.removeEventListener('keydown', escHandler);
-        }
-      };
-      document.addEventListener('keydown', escHandler);
+    async function handleUpload() {
+      const input = document.getElementById("fileInput");
+      if (!input.files[0]) return;
+      await window.uploadGalleryImage(input.files[0]);
+      loadGallery();
     }
-
-    window.openImageModal = openImageModal;
+    // 만약 업로드 버튼이 별도로 있다면:
+    const upBtn = document.getElementById("uploadBtn");
+    if (upBtn) upBtn.addEventListener("click", handleUpload);
   </script>
 </body>
 </html>

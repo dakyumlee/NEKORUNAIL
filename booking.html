@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <script type="module" src="firebase-init.js"></script>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>예약하기 - NEKORUNAIL</title>
-  <link rel="stylesheet" href="style.css" />
-  <script type="module" src="optimized-firebase.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NEKORUNAIL</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script type="module" src="firebase-init.js"></script>
+</head>
+<body>
   <style>
     .booking-hero {
       color: rgb(0, 0, 0);
@@ -424,8 +425,6 @@
       }
     }
   </style>
-</head>
-<body>
   <header class="hero">
     <nav>
       <ul>
@@ -595,204 +594,100 @@
   </footer>
 
   <script>
-    let timeSlotCache = new Map();
-
+    const timeSlotCache = new Map();
     document.addEventListener("DOMContentLoaded", () => {
       const form = document.getElementById("reserve-form");
       const dateInput = document.getElementById("date");
-
       if (dateInput) {
-        dateInput.addEventListener("change", (e) => {
-          debounce(() => updateAvailableTimeSlots(e.target.value), 300)();
-        });
-
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.min = today;
+        dateInput.min = new Date().toISOString().split("T")[0];
+        dateInput.addEventListener("change", () => updateAvailableTimeSlots(dateInput.value));
       }
-
-      if (form) {
-        form.addEventListener("submit", handleFormSubmit);
-      }
+      if (form) form.addEventListener("submit", handleFormSubmit);
     });
-
-    function debounce(func, wait) {
-      let timeout;
-      return function executedFunction(...args) {
-        const later = () => {
-          clearTimeout(timeout);
-          func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-      };
+    async function checkTimeSlotAvailable(date, time) {
+      const key = `${date}-${time}`;
+      if (timeSlotCache.has(key)) return timeSlotCache.get(key);
+      const bookings = await window.loadBookings(date);
+      const ok = !bookings.some(b => b.time === time && b.status !== "cancelled");
+      timeSlotCache.set(key, ok);
+      setTimeout(() => timeSlotCache.delete(key), 60000);
+      return ok;
     }
-
-    function showNotification(message, type = 'success') {
-      const existing = document.querySelector('.notification');
-      if (existing) existing.remove();
-      
-      const notification = document.createElement('div');
-      notification.className = `notification ${type}`;
-      notification.textContent = message;
-      
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove();
-        }
-      }, 4000);
-      
-      notification.addEventListener('click', () => {
-        if (notification.parentNode) {
-          notification.remove();
+    async function updateAvailableTimeSlots(d) {
+      if (!d) return;
+      const booked = (await window.loadBookings(d))
+        .filter(b => b.status !== "cancelled")
+        .map(b => b.time);
+      document.querySelectorAll(".time-option").forEach(opt => {
+        const inp = opt.querySelector("input");
+        const lbl = opt.querySelector("label");
+        opt.classList.remove("unavailable");
+        inp.disabled = false;
+        lbl.style.background = "#f8f9fa";
+        lbl.style.color = "#333";
+        lbl.style.cursor = "pointer";
+        lbl.removeAttribute("title");
+      });
+      booked.forEach(t => {
+        const inp = document.querySelector(`input[value="${t}"]`);
+        if (inp) {
+          const opt = inp.closest(".time-option");
+          const lbl = inp.nextElementSibling;
+          opt.classList.add("unavailable");
+          inp.disabled = true;
+          inp.checked = false;
+          lbl.style.background = "#f1f3f4";
+          lbl.style.color = "#9aa0a6";
+          lbl.style.cursor = "not-allowed";
+          lbl.title = "이미 예약된 시간입니다";
         }
       });
     }
-
-    async function checkTimeSlotAvailable(date, time) {
-      const cacheKey = `${date}-${time}`;
-      if (timeSlotCache.has(cacheKey)) {
-        return timeSlotCache.get(cacheKey);
-      }
-
-      try {
-        if (window.loadOptimizedBookings) {
-          const bookings = await window.loadOptimizedBookings(50, date);
-          const isAvailable = !bookings.some(booking => 
-            booking.time === time && booking.status !== 'cancelled'
-          );
-          
-          timeSlotCache.set(cacheKey, isAvailable);
-          setTimeout(() => {
-            timeSlotCache.delete(cacheKey);
-          }, 60000);
-          
-          return isAvailable;
-        }
-        return true;
-      } catch (error) {
-        console.error('시간대 체크 실패:', error);
-        return true;
-      }
-    }
-
-    async function updateAvailableTimeSlots(selectedDate) {
-      if (!selectedDate) return;
-
-      try {
-        let bookedTimes = [];
-        
-        if (window.loadOptimizedBookings) {
-          const bookings = await window.loadOptimizedBookings(50, selectedDate);
-          bookedTimes = bookings
-            .filter(booking => booking.status !== 'cancelled')
-            .map(booking => booking.time);
-        }
-
-        const timeOptions = document.querySelectorAll('.time-option');
-        timeOptions.forEach(option => {
-          option.classList.remove('unavailable');
-          const input = option.querySelector('input');
-          const label = option.querySelector('label');
-          
-          input.disabled = false;
-          label.style.background = '#f8f9fa';
-          label.style.color = '#333';
-          label.style.cursor = 'pointer';
-          label.removeAttribute('title');
-        });
-
-        bookedTimes.forEach(time => {
-          const timeInput = document.querySelector(`input[value="${time}"]`);
-          if (timeInput) {
-            const timeOption = timeInput.closest('.time-option');
-            const label = timeInput.nextElementSibling;
-            
-            timeOption.classList.add('unavailable');
-            timeInput.disabled = true;
-            timeInput.checked = false;
-            
-            label.style.background = '#f1f3f4';
-            label.style.color = '#9aa0a6';
-            label.style.cursor = 'not-allowed';
-            label.title = '이미 예약된 시간입니다';
-          }
-        });
-
-      } catch (error) {
-        console.error('시간대 업데이트 실패:', error);
-      }
-    }
-
     async function handleFormSubmit(e) {
       e.preventDefault();
-
-      const name = document.getElementById("name").value.trim();
-      const phone = document.getElementById("phone").value.trim();
-      const date = document.getElementById("date").value;
-      const timeInputs = document.querySelectorAll('input[name="time"]:checked');
-      const time = timeInputs.length > 0 ? timeInputs[0].value : '';
-      
-      const serviceInputs = document.querySelectorAll('input[name="services"]:checked');
-      const services = Array.from(serviceInputs).map(input => input.value);
-      
+      const n = document.getElementById("name").value.trim();
+      const p = document.getElementById("phone").value.trim();
+      const d = document.getElementById("date").value;
+      const tEl = document.querySelector('input[name="time"]:checked');
+      const t = tEl ? tEl.value : "";
+      const sv = Array.from(document.querySelectorAll('input[name="services"]:checked')).map(i => i.value);
       const notes = document.getElementById("notes").value.trim();
-
-      if (!name || !phone || !date || !time) {
-        showNotification("모든 필수 정보를 입력해주세요.", 'error');
+      if (!n || !p || !d || !t) {
+        showNotification("모든 필수 정보를 입력해주세요.","error");
         return;
       }
-
-      const submitBtn = document.getElementById("submit-btn");
-      const btnText = submitBtn.querySelector('.btn-text');
-      const loading = submitBtn.querySelector('.loading-spinner');
-
+      const btn = document.getElementById("submit-btn");
+      const txt = btn.querySelector(".btn-text");
+      const spin = btn.querySelector(".loading-spinner");
+      txt.style.display = "none";
+      spin.style.display = "inline-block";
+      btn.disabled = true;
       try {
-        btnText.style.display = 'none';
-        loading.style.display = 'inline-block';
-        submitBtn.disabled = true;
-
-        const isAvailable = await checkTimeSlotAvailable(date, time);
-        if (!isAvailable) {
-          showNotification("⚠️ 해당 날짜와 시간에는 이미 예약이 존재합니다.\n다른 시간대를 선택해주세요.", 'warning');
-          await updateAvailableTimeSlots(date);
+        if (!await checkTimeSlotAvailable(d, t)) {
+          showNotification("해당 시간 이미 예약이 있습니다.","warning");
+          await updateAvailableTimeSlots(d);
           return;
         }
-
-        const bookingData = {
-          name,
-          phone,
-          date,
-          time,
-          services: services.length > 0 ? services : ['기본 케어'],
-          notes: notes || '',
-          status: 'pending'
-        };
-
-        let bookingId;
-        if (window.addOptimizedDocument) {
-          bookingId = await window.addOptimizedDocument('bookings', bookingData);
-        } else {
-          throw new Error('최적화된 Firebase 시스템을 로드할 수 없습니다.');
-        }
-        
-        const servicesText = services.length > 0 ? services.join(', ') : '기본 케어';
-        
-        showNotification(`✅ 예약 완료!\n\n👤 ${name}\n📞 ${phone}\n📅 ${date} ${time}\n💅 ${servicesText}\n\n곧 확인 연락을 드릴 예정입니다!`, 'success');
-        
+        await window.addBooking({
+          name: n,
+          phone: p,
+          date: d,
+          time: t,
+          services: sv.length ? sv : ["기본 케어"],
+          notes,
+          status: "pending"
+        });
+        showNotification("✅ 예약 완료!","success");
         document.getElementById("reserve-form").reset();
-        
         timeSlotCache.clear();
-        await updateAvailableTimeSlots(date);
-        
+        await updateAvailableTimeSlots(d);
       } catch (err) {
-        console.error("예약 실패:", err);
-        showNotification(`예약 처리 중 오류가 발생했습니다: ${err.message}`, 'error');
+        console.error(err);
+        showNotification("예약 처리 중 오류 발생","error");
       } finally {
-        btnText.style.display = 'inline';
-        loading.style.display = 'none';
-        submitBtn.disabled = false;
+        txt.style.display = "inline";
+        spin.style.display = "none";
+        btn.disabled = false;
       }
     }
   </script>
