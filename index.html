@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css" />
   <script defer src="script.js"></script>
   <script>
-//로컬 스토리지에서 리뷰 가져오라고!!!!!!!!!!!!
+    // 로컬스토리지에서 리뷰 가져오기 하 좀
     function getLocalReviews() {
       const stored = localStorage.getItem('nekorunail_reviews');
       return stored ? JSON.parse(stored) : [];
@@ -18,7 +18,7 @@
         const reviewsContainer = document.getElementById('reviews-container');
         
         const reviews = getLocalReviews();
-        const recentReviews = reviews.slice(0, 5);
+        const recentReviews = reviews.slice(0, 5); // 최근 5개만
         
         reviewsContainer.innerHTML = '';
         
@@ -44,14 +44,14 @@
           
           const imageHtml = data.imageUrl ? 
             `<div class="review-image">
-               <img src="${data.imageUrl}" alt="후기 사진" />
+               <img src="${data.imageUrl}" alt="후기 사진" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; float: left; margin-right: 1rem;" />
              </div>` : '';
           
           reviewCard.innerHTML = `
             ${imageHtml}
             <div class="stars">${starsDisplay}</div>
-            <p>"${data.content}"</p>
-            <cite>- ${data.name} (${dateString})</cite>
+            <p style="line-height: 1.6; margin: 0.5rem 0; ${data.imageUrl ? 'min-height: 80px; display: flex; align-items: center;' : ''}">"${data.content}"</p>
+            <cite style="clear: both; display: block; margin-top: 1rem;">- ${data.name} (${dateString})</cite>
           `;
           
           reviewsContainer.appendChild(reviewCard);

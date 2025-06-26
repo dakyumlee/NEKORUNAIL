@@ -303,7 +303,6 @@
       }
     }
 
-    // 이미지 제거 함수
     function removeImage() {
       document.getElementById("review-image").value = '';
       document.getElementById("image-preview").style.display = 'none';
@@ -327,37 +326,86 @@
     <p>고객님의 소중한 후기를 남겨주세요</p>
   </header>
 
-  <section class="review-form-section" style="display: flex; justify-content: center; padding: 2rem;">
-    <div class="form-container" style="max-width: 600px; width: 100%; margin: 0 auto;">
+  <section class="review-form-section" style="display: flex; justify-content: center; padding: 2rem; min-height: 80vh;">
+    <div class="form-container" style="
+      max-width: 600px; 
+      width: 100%; 
+      margin: 0 auto;
+      background: white;
+      border-radius: 25px;
+      padding: 3rem;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    ">
       <h3 style="text-align: center; margin-bottom: 2rem; font-size: 1.8rem; color: #333;">후기 작성하기</h3>
       <form id="review-form">
-        <div class="form-group" style="text-align: center;">
-          <label for="reviewer" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">이름</label>
-          <input type="text" id="reviewer" placeholder="이름을 입력해주세요" required style="font-family: 'MaruBuri'; width: 100%; max-width: 400px; margin: 0 auto; display: block;"/>
+        <div class="form-group" style="text-align: center; margin-bottom: 1.5rem;">
+          <label for="reviewer" style="display: block; margin-bottom: 0.8rem; color: #333; font-weight: 600; font-size: 1.1rem;">이름</label>
+          <input type="text" id="reviewer" placeholder="이름을 입력해주세요" required style="
+            font-family: 'MaruBuri'; 
+            width: 100%; 
+            max-width: 400px; 
+            margin: 0 auto; 
+            display: block;
+            padding: 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+          "/>
         </div>
         
-        <div class="form-group" style="text-align: center;">
-          <label for="rating" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">별점</label>
+        <div class="form-group" style="text-align: center; margin-bottom: 1.5rem;">
+          <label for="rating" style="display: block; margin-bottom: 0.8rem; color: #333; font-weight: 600; font-size: 1.1rem;">별점</label>
           <div class="star-rating" id="star-rating" style="display: flex; justify-content: center; margin: 1rem 0;">
-            <!-- 별점 JavaScript로 생성ㅏㄹ꼬얏 -->
+           
           </div>
           <input type="hidden" id="rating" name="rating" required />
-          <p class="rating-text" style="text-align: center; margin: 0.5rem 0; color: #333;">별을 클릭하여 평점을 매겨주세요</p>
+          <p class="rating-text" style="text-align: center; margin: 0.5rem 0; color: #333; font-weight: 500;">별을 클릭하여 평점을 매겨주세요</p>
         </div>
         
-        <div class="form-group" style="text-align: center;">
-          <label for="review-content" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">후기 내용</label>
-          <textarea id="review-content" placeholder="네일 서비스는 어떠셨나요? 솔직한 후기를 남겨주세요 💖" required style="font-family: 'MaruBuri'; height: 120px; resize: vertical; width: 100%; max-width: 500px; margin: 0 auto; display: block;"></textarea>
+        <div class="form-group" style="text-align: center; margin-bottom: 1.5rem;">
+          <label for="review-content" style="display: block; margin-bottom: 0.8rem; color: #333; font-weight: 600; font-size: 1.1rem;">후기 내용</label>
+          <textarea id="review-content" placeholder="네일 서비스는 어떠셨나요? 솔직한 후기를 남겨주세요 💖" required style="
+            font-family: 'MaruBuri'; 
+            height: 120px; 
+            resize: vertical; 
+            width: 100%; 
+            max-width: 500px; 
+            margin: 0 auto; 
+            display: block;
+            padding: 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            line-height: 1.6;
+            transition: all 0.3s ease;
+          "></textarea>
         </div>
         
-        <div class="form-group" style="text-align: center;">
-          <label for="review-image" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">사진 첨부 (선택사항)</label>
-          <div class="image-upload-area" style="max-width: 500px; margin: 0 auto;">
-            <input type="file" id="review-image" accept="image/*" />
+        <div class="form-group" style="text-align: center; margin-bottom: 2rem;">
+          <label for="review-image" style="display: block; margin-bottom: 0.8rem; color: #333; font-weight: 600; font-size: 1.1rem;">사진 첨부 (선택사항)</label>
+          <div class="image-upload-area" style="
+            max-width: 500px; 
+            margin: 0 auto;
+            border: 3px dashed #cbd5e0;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #fafbfc;
+          ">
+            <input type="file" id="review-image" accept="image/*" style="
+              position: absolute;
+              opacity: 0;
+              width: 100%;
+              height: 100%;
+              cursor: pointer;
+            " />
             <div class="upload-placeholder">
-              <div class="upload-icon">📷</div>
-              <p>네일 사진을 업로드해주세요</p>
-              <span class="upload-hint">JPG, PNG, GIF 형식 (최대 5MB)</span>
+              <div class="upload-icon" style="font-size: 2.5rem; margin-bottom: 1rem; color: #a0aec0;">📷</div>
+              <p style="color: #718096; font-size: 1rem; margin-bottom: 0.5rem;">네일 사진을 업로드해주세요</p>
+              <span class="upload-hint" style="color: #a0aec0; font-size: 0.9rem;">JPG, PNG, GIF 형식 (최대 5MB)</span>
             </div>
           </div>
           <div id="image-preview" style="display: none; text-align: center; margin-top: 1rem;">
