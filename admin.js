@@ -1,31 +1,18 @@
-let db, storage;
 let isLoggedIn = false;
-let firebaseInitialized = false;
 
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', function() {
     initializeAdmin();
-    
-    try {
-        const firebaseModule = await import('./firebase.js');
-        db = firebaseModule.db;
-        storage = firebaseModule.storage;
-        
-        if (db && storage) {
-            firebaseInitialized = true;
-            showNotification('🔗 Firebase 연결 완료!', 'success');
-            
-            if (isLoggedIn) {
-                loadRealDashboard();
-            }
-        } else {
-            throw new Error('Firebase 객체 초기화 실패');
-        }
-    } catch (error) {
-        console.error('Firebase 초기화 실패:', error);
-        firebaseInitialized = false;
-        showNotification('⚠️ 오프라인 모드로 실행', 'warning');
-    }
 });
+
+// 로컬스토리지 데이터 가져오기 가져온나. 가져온나어이.
+function getLocalData(key) {
+    const stored = localStorage.getItem(`nekorunail_${key}`);
+    return stored ? JSON.parse(stored) : [];
+}
+
+function saveLocalData(key, data) {
+    localStorage.setItem(`nekorunail_${key}`, JSON.stringify(data));
+}
 
 function initializeAdmin() {
     const loginOverlay = document.getElementById('login-overlay');
@@ -49,7 +36,7 @@ function checkLoginStatus(loginOverlay, adminPanel) {
     if (savedLogin === 'true') {
         isLoggedIn = true;
         showAdminPanel(loginOverlay, adminPanel);
-        loadDemoDashboard();
+        loadLocalDashboard();
     } else {
         showLoginScreen(loginOverlay, adminPanel);
     }
@@ -155,12 +142,7 @@ function handleLogin(adminPass, loginOverlay, adminPanel) {
         
         showNotification('✅ 로그인 성공!', 'success');
         showAdminPanel(loginOverlay, adminPanel);
-        
-        if (firebaseInitialized) {
-            loadRealDashboard();
-        } else {
-            loadDemoDashboard();
-        }
+        loadLocalDashboard();
     } else {
         showNotification('❌ 비밀번호가 틀렸습니다.', 'error');
         adminPass.value = '';
@@ -205,11 +187,7 @@ function switchTab(tabName) {
     
     switch (tabName) {
         case 'dashboard':
-            if (firebaseInitialized) {
-                loadRealDashboard();
-            } else {
-                loadDemoDashboard();
-            }
+            loadLocalDashboard();
             break;
         case 'bookings':
             loadBookings();
@@ -223,12 +201,20 @@ function switchTab(tabName) {
     }
 }
 
-function loadDemoDashboard() {
+function loadLocalDashboard() {
+    const bookings = getLocalData('bookings');
+    const gallery = getLocalData('gallery');
+    const reviews = getLocalData('reviews');
+    
+    // 오늘 예약 계산
+    const today = new Date().toISOString().split('T')[0];
+    const todayBookings = bookings.filter(booking => booking.date === today);
+    
     const stats = {
-        'total-bookings': '?',
-        'total-gallery': '?',
-        'total-reviews': '?',
-        'today-bookings': '?'
+        'total-bookings': bookings.length,
+        'total-gallery': gallery.length,
+        'total-reviews': reviews.length,
+        'today-bookings': todayBookings.length
     };
     
     Object.entries(stats).forEach(([id, value]) => {
@@ -236,293 +222,173 @@ function loadDemoDashboard() {
         if (element) element.textContent = value;
     });
     
-    const recentBookings = document.getElementById('recent-bookings');
-    if (recentBookings) {
-        recentBookings.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: #718096;">
-                <h4>🔗 Firebase 연결 대기 중</h4>
-                <p>연결되면 실제 데이터가 표시됩니다.</p>
-            </div>
-        `;
-    }
+    loadRecentBookings();
+    showNotification('📊 로컬 데이터로 업데이트됨!', 'success');
 }
 
-async function loadRealDashboard() {
-    if (!firebaseInitialized) {
-        loadDemoDashboard();
-        return;
-    }
-    
-    try {
-        const { collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js');
-        
-        const [bookingsSnapshot, gallerySnapshot, reviewsSnapshot] = await Promise.all([
-            getDocs(collection(db, "bookings")),
-            getDocs(collection(db, "gallery")),
-            getDocs(collection(db, "reviews"))
-        ]);
-        
-        const today = new Date().toISOString().split('T')[0];
-        const todayQuery = query(collection(db, "bookings"), where("date", "==", today));
-        const todaySnapshot = await getDocs(todayQuery);
-        
-        const stats = {
-            'total-bookings': bookingsSnapshot.size,
-            'total-gallery': gallerySnapshot.size,
-            'total-reviews': reviewsSnapshot.size,
-            'today-bookings': todaySnapshot.size
-        };
-        
-        Object.entries(stats).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) element.textContent = value;
-        });
-        
-        await loadRecentBookings();
-        showNotification('📊 실제 데이터로 업데이트됨!', 'success');
-        
-    } catch (error) {
-        console.error('실제 대시보드 로드 실패:', error);
-        loadDemoDashboard();
-        showNotification('데이터 로드 실패 - 데모 모드', 'error');
-    }
-}
-
-async function loadRecentBookings() {
-    if (!firebaseInitialized) return;
-    
+function loadRecentBookings() {
     const recentBookings = document.getElementById('recent-bookings');
     if (!recentBookings) return;
     
-    try {
-        const { collection, getDocs, query, orderBy, limit } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js');
-        
-        const q = query(collection(db, "bookings"), orderBy("createdAt", "desc"), limit(5));
-        const snapshot = await getDocs(q);
-        
-        recentBookings.innerHTML = '';
-        
-        if (snapshot.empty) {
-            recentBookings.innerHTML = '<p style="text-align: center; color: #718096;">최근 예약이 없습니다.</p>';
-            return;
-        }
-        
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const item = document.createElement('div');
-            item.className = 'recent-item';
-            
-            const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
-            const timeString = createdAt.toLocaleDateString('ko-KR');
-            
-            item.innerHTML = `
-                <div class="recent-item-header">
-                    <span class="recent-item-name">${data.name}</span>
-                    <span class="recent-item-time">${timeString}</span>
-                </div>
-                <div class="recent-item-details">
-                    📅 ${data.date} ${data.time} | 📞 ${data.phone}
-                </div>
-            `;
-            recentBookings.appendChild(item);
-        });
-        
-    } catch (error) {
-        console.error('최근 예약 로드 실패:', error);
-        recentBookings.innerHTML = '<p style="text-align: center; color: #ef4444;">로드 실패</p>';
+    const bookings = getLocalData('bookings');
+    const recentList = bookings.slice(0, 5); // 최근 5개만...
+    
+    recentBookings.innerHTML = '';
+    
+    if (recentList.length === 0) {
+        recentBookings.innerHTML = '<p style="text-align: center; color: #718096;">최근 예약이 없습니다.</p>';
+        return;
     }
+    
+    recentList.forEach(data => {
+        const item = document.createElement('div');
+        item.className = 'recent-item';
+        
+        const createdAt = new Date(data.createdAt);
+        const timeString = createdAt.toLocaleDateString('ko-KR');
+        
+        item.innerHTML = `
+            <div class="recent-item-header">
+                <span class="recent-item-name">${data.name}</span>
+                <span class="recent-item-time">${timeString}</span>
+            </div>
+            <div class="recent-item-details">
+                📅 ${data.date} ${data.time} | 📞 ${data.phone}
+            </div>
+        `;
+        recentBookings.appendChild(item);
+    });
 }
 
-async function loadBookings() {
+function loadBookings() {
     const bookingsList = document.getElementById('bookings-list');
     if (!bookingsList) return;
     
-    if (!firebaseInitialized) {
-        bookingsList.innerHTML = `
-            <div class="data-row data-header">
-                <div><strong>이름</strong></div>
-                <div><strong>연락처</strong></div>
-                <div><strong>예약일시</strong></div>
-                <div><strong>상태</strong></div>
-                <div><strong>작업</strong></div>
-            </div>
-            <div style="text-align: center; padding: 2rem; color: #718096;">
-                Firebase 연결 후 데이터가 표시됩니다.
-            </div>
-        `;
+    const bookings = getLocalData('bookings');
+    
+    bookingsList.innerHTML = `
+        <div class="data-row data-header">
+            <div><strong>이름</strong></div>
+            <div><strong>연락처</strong></div>
+            <div><strong>예약일시</strong></div>
+            <div><strong>상태</strong></div>
+            <div><strong>작업</strong></div>
+        </div>
+    `;
+    
+    if (bookings.length === 0) {
+        bookingsList.innerHTML += '<div style="text-align: center; padding: 2rem; color: #718096;">예약이 없습니다.</div>';
         return;
     }
     
-    try {
-        const { collection, getDocs, query, orderBy } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js');
+    bookings.forEach((data, index) => {
+        const row = document.createElement('div');
+        row.className = 'data-row';
         
-        const q = query(collection(db, "bookings"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
+        const status = data.status || 'pending';
+        const statusClass = `status-${status}`;
+        const statusText = status === 'confirmed' ? '확정' : status === 'cancelled' ? '취소' : '대기';
         
-        bookingsList.innerHTML = `
-            <div class="data-row data-header">
-                <div><strong>이름</strong></div>
-                <div><strong>연락처</strong></div>
-                <div><strong>예약일시</strong></div>
-                <div><strong>상태</strong></div>
-                <div><strong>작업</strong></div>
+        row.innerHTML = `
+            <div>${data.name}</div>
+            <div>${data.phone}</div>
+            <div>${data.date} ${data.time}</div>
+            <div><span class="status-badge ${statusClass}">${statusText}</span></div>
+            <div>
+                <select onchange="updateBookingStatus(${index}, this.value)">
+                    <option value="pending" ${status === 'pending' ? 'selected' : ''}>대기</option>
+                    <option value="confirmed" ${status === 'confirmed' ? 'selected' : ''}>확정</option>
+                    <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>취소</option>
+                </select>
+                <button class="delete-btn" onclick="deleteBooking(${index})">삭제</button>
             </div>
         `;
-        
-        if (snapshot.empty) {
-            bookingsList.innerHTML += '<div style="text-align: center; padding: 2rem; color: #718096;">예약이 없습니다.</div>';
-            return;
-        }
-        
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const row = document.createElement('div');
-            row.className = 'data-row';
-            
-            const status = data.status || 'pending';
-            const statusClass = `status-${status}`;
-            const statusText = status === 'confirmed' ? '확정' : status === 'cancelled' ? '취소' : '대기';
-            
-            row.innerHTML = `
-                <div>${data.name}</div>
-                <div>${data.phone}</div>
-                <div>${data.date} ${data.time}</div>
-                <div><span class="status-badge ${statusClass}">${statusText}</span></div>
-                <div>
-                    <select onchange="updateBookingStatus('${doc.id}', this.value)">
-                        <option value="pending" ${status === 'pending' ? 'selected' : ''}>대기</option>
-                        <option value="confirmed" ${status === 'confirmed' ? 'selected' : ''}>확정</option>
-                        <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>취소</option>
-                    </select>
-                    <button class="delete-btn" onclick="deleteBooking('${doc.id}')">삭제</button>
-                </div>
-            `;
-            bookingsList.appendChild(row);
-        });
-        
-    } catch (error) {
-        console.error('예약 로드 실패:', error);
-        showNotification('예약 로드 실패', 'error');
-    }
+        bookingsList.appendChild(row);
+    });
 }
 
-async function loadGallery() {
+function loadGallery() {
     const galleryList = document.getElementById('gallery-list');
     if (!galleryList) return;
     
-    if (!firebaseInitialized) {
-        galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">Firebase 연결 후 갤러리가 표시됩니다.</div>';
+    const gallery = getLocalData('gallery');
+    
+    galleryList.innerHTML = '';
+    
+    if (gallery.length === 0) {
+        galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">갤러리가 비어있습니다.</div>';
         return;
     }
     
-    try {
-        const { collection, getDocs, query, orderBy } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js');
+    gallery.forEach((data, index) => {
+        const card = document.createElement('div');
+        card.className = 'admin-gallery-card';
         
-        const q = query(collection(db, "gallery"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
+        const createdAt = new Date(data.createdAt);
+        const dateString = createdAt.toLocaleDateString('ko-KR');
         
-        galleryList.innerHTML = '';
-        
-        if (snapshot.empty) {
-            galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">갤러리가 비어있습니다.</div>';
-            return;
-        }
-        
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const card = document.createElement('div');
-            card.className = 'admin-gallery-card';
-            
-            const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
-            const dateString = createdAt.toLocaleDateString('ko-KR');
-            
-            card.innerHTML = `
-                <img src="${data.imageUrl}" alt="갤러리 이미지" />
-                <div class="card-content">
-                    <div class="card-info">
-                        <h4>${data.caption || '무제'}</h4>
-                        <p>업로드: ${dateString}</p>
-                    </div>
-                    <div class="card-actions">
-                        <button class="delete-btn" onclick="deleteGalleryItem('${doc.id}', '${data.imageUrl}')">삭제</button>
-                    </div>
+        card.innerHTML = `
+            <img src="${data.imageUrl}" alt="갤러리 이미지" />
+            <div class="card-content">
+                <div class="card-info">
+                    <h4>${data.caption || '무제'}</h4>
+                    <p>업로드: ${dateString}</p>
                 </div>
-            `;
-            galleryList.appendChild(card);
-        });
-        
-    } catch (error) {
-        console.error('갤러리 로드 실패:', error);
-        showNotification('갤러리 로드 실패', 'error');
-    }
+                <div class="card-actions">
+                    <button class="delete-btn" onclick="deleteGalleryItem(${index})">삭제</button>
+                </div>
+            </div>
+        `;
+        galleryList.appendChild(card);
+    });
 }
 
-async function loadReviews() {
+function loadReviews() {
     const reviewsList = document.getElementById('reviews-list');
     if (!reviewsList) return;
     
-    if (!firebaseInitialized) {
-        reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">Firebase 연결 후 후기가 표시됩니다.</div>';
+    const reviews = getLocalData('reviews');
+    
+    reviewsList.innerHTML = '';
+    
+    if (reviews.length === 0) {
+        reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">후기가 없습니다.</div>';
         return;
     }
     
-    try {
-        const { collection, getDocs, query, orderBy } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js');
+    reviews.forEach((data, index) => {
+        const card = document.createElement('div');
+        card.className = 'admin-review-card';
         
-        const q = query(collection(db, "reviews"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
+        const createdAt = new Date(data.createdAt);
+        const dateString = createdAt.toLocaleDateString('ko-KR');
         
-        reviewsList.innerHTML = '';
+        const rating = data.rating || 5;
+        const starsDisplay = '⭐'.repeat(rating);
         
-        if (snapshot.empty) {
-            reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">후기가 없습니다.</div>';
-            return;
-        }
+        const imageHtml = data.imageUrl ? 
+            `<div style="text-align: center; margin-top: 1rem;">
+               <img src="${data.imageUrl}" alt="후기 사진" style="max-width: 200px; max-height: 150px; border-radius: 8px;" />
+             </div>` : '';
         
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const card = document.createElement('div');
-            card.className = 'admin-review-card';
-            
-            const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
-            const dateString = createdAt.toLocaleDateString('ko-KR');
-            
-            const rating = data.rating || 5;
-            const starsDisplay = '⭐'.repeat(rating);
-            
-            const imageHtml = data.imageUrl ? 
-                `<div style="text-align: center; margin-top: 1rem;">
-                   <img src="${data.imageUrl}" alt="후기 사진" style="max-width: 200px; max-height: 150px; border-radius: 8px;" />
-                 </div>` : '';
-            
-            card.innerHTML = `
-                <div class="review-header">
-                    <span class="review-author">${data.name}</span>
-                    <span class="review-date">${dateString}</span>
-                </div>
-                <div style="margin: 1rem 0; font-size: 1.2rem;">${starsDisplay}</div>
-                <div class="review-content">${data.content}</div>
-                ${imageHtml}
-                <div class="review-actions">
-                    <button class="delete-btn" onclick="deleteReview('${doc.id}')">삭제</button>
-                </div>
-            `;
-            reviewsList.appendChild(card);
-        });
-        
-    } catch (error) {
-        console.error('후기 로드 실패:', error);
-        showNotification('후기 로드 실패', 'error');
-    }
+        card.innerHTML = `
+            <div class="review-header">
+                <span class="review-author">${data.name}</span>
+                <span class="review-date">${dateString}</span>
+            </div>
+            <div style="margin: 1rem 0; font-size: 1.2rem;">${starsDisplay}</div>
+            <div class="review-content">${data.content}</div>
+            ${imageHtml}
+            <div class="review-actions">
+                <button class="delete-btn" onclick="deleteReview(${index})">삭제</button>
+            </div>
+        `;
+        reviewsList.appendChild(card);
+    });
 }
 
 async function handleFileUpload(e) {
     e.preventDefault();
-    
-    if (!firebaseInitialized) {
-        showNotification('Firebase 연결이 필요합니다.', 'error');
-        return;
-    }
     
     const fileInput = document.getElementById('file-input');
     const captionInput = document.getElementById('caption-input');
@@ -542,18 +408,20 @@ async function handleFileUpload(e) {
     try {
         showNotification('업로드 중...', 'info');
         
-        const { ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js');
-        const { collection, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js');
+        // 파일을 Base64로 변환
+        const imageUrl = await fileToBase64(file);
         
-        const storageRef = ref(storage, `gallery/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        const imageUrl = await getDownloadURL(storageRef);
-        
-        await addDoc(collection(db, "gallery"), {
+        const galleryData = {
+            id: Date.now(),
             imageUrl,
             caption: caption || '무제',
-            createdAt: serverTimestamp()
-        });
+            createdAt: new Date().toISOString()
+        };
+        
+        // 로컬스토리지에 저장
+        const gallery = getLocalData('gallery');
+        gallery.unshift(galleryData);
+        saveLocalData('gallery', gallery);
         
         showNotification('✅ 업로드 완료!', 'success');
         
@@ -571,98 +439,56 @@ async function handleFileUpload(e) {
     }
 }
 
-window.updateBookingStatus = async function(bookingId, newStatus) {
-    if (!firebaseInitialized) {
-        showNotification('Firebase 연결이 필요합니다.', 'error');
-        return;
-    }
-    
-    try {
-        const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js');
-        
-        await updateDoc(doc(db, "bookings", bookingId), {
-            status: newStatus
-        });
-        
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+window.updateBookingStatus = function(index, newStatus) {
+    const bookings = getLocalData('bookings');
+    if (bookings[index]) {
+        bookings[index].status = newStatus;
+        saveLocalData('bookings', bookings);
         showNotification('상태 업데이트 완료!', 'success');
         loadBookings();
-        
-    } catch (error) {
-        console.error('상태 업데이트 실패:', error);
-        showNotification('상태 업데이트 실패', 'error');
     }
 };
 
-window.deleteBooking = async function(bookingId) {
-    if (!firebaseInitialized) {
-        showNotification('Firebase 연결이 필요합니다.', 'error');
-        return;
-    }
-    
+window.deleteBooking = function(index) {
     if (!confirm('정말로 삭제하시겠습니까?')) return;
     
-    try {
-        const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js');
-        
-        await deleteDoc(doc(db, "bookings", bookingId));
-        showNotification('삭제 완료!', 'success');
-        loadBookings();
-        
-    } catch (error) {
-        console.error('삭제 실패:', error);
-        showNotification('삭제 실패', 'error');
-    }
+    const bookings = getLocalData('bookings');
+    bookings.splice(index, 1);
+    saveLocalData('bookings', bookings);
+    showNotification('삭제 완료!', 'success');
+    loadBookings();
+    loadLocalDashboard(); // 통계 업데이트
 };
 
-window.deleteGalleryItem = async function(docId, imageUrl) {
-    if (!firebaseInitialized) {
-        showNotification('Firebase 연결이 필요합니다.', 'error');
-        return;
-    }
-    
+window.deleteGalleryItem = function(index) {
     if (!confirm('정말로 삭제하시겠습니까?')) return;
     
-    try {
-        const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js');
-        const { ref, deleteObject } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js');
-        
-        await deleteDoc(doc(db, "gallery", docId));
-        
-        try {
-            const imageRef = ref(storage, imageUrl);
-            await deleteObject(imageRef);
-        } catch (e) {
-            console.log('Storage 삭제 실패:', e);
-        }
-        
-        showNotification('삭제 완료!', 'success');
-        loadGallery();
-        
-    } catch (error) {
-        console.error('삭제 실패:', error);
-        showNotification('삭제 실패', 'error');
-    }
+    const gallery = getLocalData('gallery');
+    gallery.splice(index, 1);
+    saveLocalData('gallery', gallery);
+    showNotification('삭제 완료!', 'success');
+    loadGallery();
+    loadLocalDashboard(); // 통계 업데이트
 };
 
-window.deleteReview = async function(reviewId) {
-    if (!firebaseInitialized) {
-        showNotification('Firebase 연결이 필요합니다.', 'error');
-        return;
-    }
-    
+window.deleteReview = function(index) {
     if (!confirm('정말로 삭제하시겠습니까?')) return;
     
-    try {
-        const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js');
-        
-        await deleteDoc(doc(db, "reviews", reviewId));
-        showNotification('삭제 완료!', 'success');
-        loadReviews();
-        
-    } catch (error) {
-        console.error('삭제 실패:', error);
-        showNotification('삭제 실패', 'error');
-    }
+    const reviews = getLocalData('reviews');
+    reviews.splice(index, 1);
+    saveLocalData('reviews', reviews);
+    showNotification('삭제 완료!', 'success');
+    loadReviews();
+    loadLocalDashboard(); // 통계 업데이트
 };
 
 function showNotification(message, type = 'success') {
@@ -713,4 +539,4 @@ function showNotification(message, type = 'success') {
     });
 }
 
-console.log('=== Firebase v11.9.1 관리자 스크립트 로드 완료 ===');
+console.log('=== 로컬스토리지 관리자 스크립트 로드 완료 ===');

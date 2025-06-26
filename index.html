@@ -6,10 +6,70 @@
   <title>NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css" />
   <script defer src="script.js"></script>
-  <script type="module">
-    import { db, storage } from './firebase.js';
+  <script>
+//로컬 스토리지에서 리뷰 가져오라고!!!!!!!!!!!!
+    function getLocalReviews() {
+      const stored = localStorage.getItem('nekorunail_reviews');
+      return stored ? JSON.parse(stored) : [];
+    }
+
+    function loadHomeReviews() {
+      try {
+        const reviewsContainer = document.getElementById('reviews-container');
+        
+        const reviews = getLocalReviews();
+        const recentReviews = reviews.slice(0, 5);
+        
+        reviewsContainer.innerHTML = '';
+        
+        if (recentReviews.length === 0) {
+          reviewsContainer.innerHTML = `
+            <div class="no-reviews">
+              <p>아직 등록된 후기가 없습니다.</p>
+              <p>첫 번째 후기를 남겨보세요! ✨</p>
+            </div>
+          `;
+          return;
+        }
+        
+        recentReviews.forEach(data => {
+          const reviewCard = document.createElement('div');
+          reviewCard.className = 'review-preview';
+          
+          const createdAt = new Date(data.createdAt);
+          const dateString = createdAt.toLocaleDateString('ko-KR');
+          
+          const rating = data.rating || 5;
+          const starsDisplay = '⭐'.repeat(rating);
+          
+          const imageHtml = data.imageUrl ? 
+            `<div class="review-image">
+               <img src="${data.imageUrl}" alt="후기 사진" />
+             </div>` : '';
+          
+          reviewCard.innerHTML = `
+            ${imageHtml}
+            <div class="stars">${starsDisplay}</div>
+            <p>"${data.content}"</p>
+            <cite>- ${data.name} (${dateString})</cite>
+          `;
+          
+          reviewsContainer.appendChild(reviewCard);
+        });
+        
+      } catch (error) {
+        console.error('후기 로드 오류:', error);
+        document.getElementById('reviews-container').innerHTML = `
+          <div class="error-message">
+            <p>후기를 불러오는데 실패했습니다.</p>
+            <p>잠시 후 다시 시도해주세요.</p>
+          </div>
+        `;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadHomeReviews);
   </script>
-  
 </head>
 <body>
   <header class="hero">
@@ -79,76 +139,8 @@
     </div>
   </section>
 
-
   <footer>
     <p>NEKORUNAIL ⎜ Instagram @nekorunail ⎜ 2025</p>
   </footer>
-
-  <script type="module">
-    import { db } from './firebase.js';
-    import { collection, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';
-
-    async function loadHomeReviews() {
-      try {
-        const reviewsContainer = document.getElementById('reviews-container');
-        
-        const q = query(
-          collection(db, "reviews"), 
-          orderBy("createdAt", "desc"),
-          limit(5)
-        );
-        const snapshot = await getDocs(q);
-        
-        reviewsContainer.innerHTML = '';
-        
-        if (snapshot.empty) {
-          reviewsContainer.innerHTML = `
-            <div class="no-reviews">
-              <p>아직 등록된 후기가 없습니다.</p>
-              <p>첫 번째 후기를 남겨보세요! ✨</p>
-            </div>
-          `;
-          return;
-        }
-        
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const reviewCard = document.createElement('div');
-          reviewCard.className = 'review-preview';
-          
-          const createdAt = data.createdAt?.toDate?.() || new Date();
-          const dateString = createdAt.toLocaleDateString('ko-KR');
-          
-          const rating = data.rating || 5;
-          const starsDisplay = '⭐'.repeat(rating);
-          
-          const imageHtml = data.imageUrl ? 
-            `<div class="review-image">
-               <img src="${data.imageUrl}" alt="후기 사진" />
-             </div>` : '';
-          
-          reviewCard.innerHTML = `
-            ${imageHtml}
-            <div class="stars">${starsDisplay}</div>
-            <p>"${data.content}"</p>
-            <cite>- ${data.name} (${dateString})</cite>
-          `;
-          
-          reviewsContainer.appendChild(reviewCard);
-        });
-        
-      } catch (error) {
-        console.error('후기 로드 오류:', error);
-        document.getElementById('reviews-container').innerHTML = `
-          <div class="error-message">
-            <p>후기를 불러오는데 실패했습니다.</p>
-            <p>잠시 후 다시 시도해주세요.</p>
-          </div>
-        `;
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', loadHomeReviews);
-  </script>
 </body>
 </html>
