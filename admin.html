@@ -2,32 +2,135 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>관리자 페이지 - NEKORUNAIL</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리자 대시보드 - NEKORUNAIL</title>
+  <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="admin.css" />
 </head>
 <body>
-  <header>
-    <h1>📋 관리자 페이지</h1>
-  </header>
+  <div id="login-overlay">
+    <div class="login-card">
+      <h2>🔐 관리자 로그인</h2>
+      <div class="login-form">
+        <input id="admin-pass" type="password" placeholder="비밀번호를 입력하세요" />
+        <button id="login-btn">
+          <span class="btn-text">로그인</span>
+          <div class="loading" style="display: none;"></div>
+        </button>
+      </div>
+    </div>
+  </div>
 
-  <main>
-    <section class="admin-section">
-      <h2>📦 예약 리스트</h2>
-      <div id="booking-list" class="admin-list">로딩 중...</div>
+  <main id="admin-panel" style="display: none;">
+    <header class="admin-header">
+      <h1>📊 NEKORUNAIL 관리자 대시보드</h1>
+      <div class="admin-nav">
+        <button class="nav-btn active" data-tab="dashboard">📈 대시보드</button>
+        <button class="nav-btn" data-tab="bookings">📅 예약 관리</button>
+        <button class="nav-btn" data-tab="gallery">🖼️ 갤러리 관리</button>
+        <button class="nav-btn" data-tab="reviews">💬 후기 관리</button>
+        <button class="nav-btn logout" id="logout-btn">🚪 로그아웃</button>
+      </div>
+    </header>
+<br><br><br>
+    <section id="dashboard-tab" class="tab-content active">
+      <div class="dashboard-grid">
+        <div class="stats-card">
+          <div class="stats-icon">📅</div>
+          <div class="stats-info">
+            <h3 id="total-bookings">0</h3>
+            <p>전체 예약</p>
+          </div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-icon">🖼️</div>
+          <div class="stats-info">
+            <h3 id="total-gallery">0</h3>
+            <p>갤러리 이미지</p>
+          </div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-icon">💬</div>
+          <div class="stats-info">
+            <h3 id="total-reviews">0</h3>
+            <p>고객 후기</p>
+          </div>
+        </div>
+        <div class="stats-card">
+          <div class="stats-icon">📈</div>
+          <div class="stats-info">
+            <h3 id="today-bookings">0</h3>
+            <p>오늘 예약</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="recent-section">
+        <h2>📋 최근 예약</h2>
+        <div id="recent-bookings" class="recent-list"></div>
+      </div>
     </section>
 
-    <section class="admin-section">
-      <h2>🖼 갤러리 업로드 리스트</h2>
-      <div id="gallery-list" class="admin-list">로딩 중...</div>
+    <section id="bookings-tab" class="tab-content">
+      <div class="section-header">
+        <h2>📅 예약 관리</h2>
+        <div class="filter-controls">
+          <input type="date" id="date-filter" />
+          <select id="status-filter">
+            <option value="">전체 상태</option>
+            <option value="confirmed">확정</option>
+            <option value="pending">대기</option>
+            <option value="cancelled">취소</option>
+          </select>
+          <button id="refresh-bookings">🔄 새로고침</button>
+        </div>
+      </div>
+      <div id="bookings-list" class="data-grid"></div>
     </section>
 
-    <section class="admin-section">
-      <h2>💬 후기 리스트</h2>
-      <div id="review-list" class="admin-list">로딩 중...</div>
+    <section id="gallery-tab" class="tab-content">
+      <div class="section-header">
+        <h2>🖼️ 갤러리 관리</h2>
+        <button id="upload-toggle" class="primary-btn">➕ 새 이미지 업로드</button>
+      </div>
+      
+      <div id="upload-section" class="upload-form" style="display: none;">
+        <form id="upload-form">
+          <div class="upload-area">
+            <input type="file" id="file-input" accept="image/*" required />
+            <div class="upload-placeholder">
+              <div class="upload-icon">📷</div>
+              <p>이미지를 선택하거나 드래그해주세요</p>
+            </div>
+          </div>
+          <input type="text" id="caption-input" placeholder="이미지 설명을 입력하세요" />
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">업로드</button>
+            <button type="button" id="cancel-upload" class="secondary-btn">취소</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="gallery-list" class="gallery-grid"></div>
+    </section>
+
+    <section id="reviews-tab" class="tab-content">
+      <div class="section-header">
+        <h2>💬 후기 관리</h2>
+        <div class="sort-controls">
+          <select id="review-sort">
+            <option value="newest">최신순</option>
+            <option value="oldest">오래된순</option>
+            <option value="highest">별점 높은순</option>
+            <option value="lowest">별점 낮은순</option>
+          </select>
+        </div>
+      </div>
+      <div id="reviews-list" class="reviews-grid"></div>
     </section>
   </main>
 
+  <script type="module" src="optimized-firebase.js"></script>
   <script type="module" src="admin.js"></script>
 </body>
 </html>
