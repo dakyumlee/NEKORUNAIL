@@ -1,12 +1,14 @@
 let isLoggedIn = false;
 let firebaseLoaded = false;
-let db, storage;
 let dataCache = {
   bookings: { data: null, timestamp: 0 },
   gallery: { data: null, timestamp: 0 },
   reviews: { data: null, timestamp: 0 }
 };
 const CACHE_DURATION = 2 * 60 * 1000;
+const db = window.db;
+const storage = window.storage;
+
 
 document.addEventListener('DOMContentLoaded', function() {
   initializeAdmin();
@@ -927,4 +929,3 @@ function showNotification(message, type = 'success') {
 }
 
 console.log('=== 최적화된 Firebase 관리자 스크립트 로드 완료 ===');
-<script type="module" src="optimized-firebase.js"></script>

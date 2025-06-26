@@ -2,6 +2,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const toggleDark = () => {
       document.body.classList.toggle("dark-mode");
     };
+
+    const db = window.db;
+const storage = window.storage;
+
   
     document.addEventListener("keydown", e => {
       if (e.shiftKey && e.key.toLowerCase() === "d") toggleDark();
