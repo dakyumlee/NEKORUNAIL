@@ -708,8 +708,7 @@ function showNotification(message, type = 'success') {
         }
     });
 }
-    }
-});
+    
 
 async function initializeFirebase() {
     try {
