@@ -331,28 +331,28 @@
     <div class="form-container" style="max-width: 600px; width: 100%; margin: 0 auto;">
       <h3 style="text-align: center; margin-bottom: 2rem; font-size: 1.8rem; color: #333;">후기 작성하기</h3>
       <form id="review-form">
-        <div class="form-group">
-          <label for="reviewer">이름</label>
-          <input type="text" id="reviewer" placeholder="이름을 입력해주세요" required style="font-family: 'MaruBuri';"/>
+        <div class="form-group" style="text-align: center;">
+          <label for="reviewer" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">이름</label>
+          <input type="text" id="reviewer" placeholder="이름을 입력해주세요" required style="font-family: 'MaruBuri'; width: 100%; max-width: 400px; margin: 0 auto; display: block;"/>
         </div>
         
-        <div class="form-group">
-          <label for="rating">별점</label>
+        <div class="form-group" style="text-align: center;">
+          <label for="rating" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">별점</label>
           <div class="star-rating" id="star-rating" style="display: flex; justify-content: center; margin: 1rem 0;">
-            <!-- 별점은 JavaScript로 생성됩니다 -->
+            <!-- 별점 JavaScript로 생성ㅏㄹ꼬얏 -->
           </div>
           <input type="hidden" id="rating" name="rating" required />
-          <p class="rating-text" style="text-align: center;">별을 클릭하여 평점을 매겨주세요</p>
+          <p class="rating-text" style="text-align: center; margin: 0.5rem 0; color: #333;">별을 클릭하여 평점을 매겨주세요</p>
         </div>
         
-        <div class="form-group">
-          <label for="review-content">후기 내용</label>
-          <textarea id="review-content" placeholder="네일 서비스는 어떠셨나요? 솔직한 후기를 남겨주세요 💖" required style="font-family: 'MaruBuri'; height: 120px; resize: vertical;"></textarea>
+        <div class="form-group" style="text-align: center;">
+          <label for="review-content" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">후기 내용</label>
+          <textarea id="review-content" placeholder="네일 서비스는 어떠셨나요? 솔직한 후기를 남겨주세요 💖" required style="font-family: 'MaruBuri'; height: 120px; resize: vertical; width: 100%; max-width: 500px; margin: 0 auto; display: block;"></textarea>
         </div>
         
-        <div class="form-group">
-          <label for="review-image">사진 첨부 (선택사항)</label>
-          <div class="image-upload-area">
+        <div class="form-group" style="text-align: center;">
+          <label for="review-image" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">사진 첨부 (선택사항)</label>
+          <div class="image-upload-area" style="max-width: 500px; margin: 0 auto;">
             <input type="file" id="review-image" accept="image/*" />
             <div class="upload-placeholder">
               <div class="upload-icon">📷</div>
@@ -367,8 +367,19 @@
           </div>
         </div>
         
-        <div style="text-align: center;">
-          <button type="submit" id="submit-btn">
+        <div style="text-align: center; margin-top: 2rem;">
+          <button type="submit" id="submit-btn" style="
+            background: linear-gradient(135deg, #ff69b4, #ff1493);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+          ">
             후기 등록하기
           </button>
         </div>
