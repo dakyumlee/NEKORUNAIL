@@ -22,8 +22,11 @@ const REVIEWS_PER_PAGE = 10;
 
 document.addEventListener("DOMContentLoaded", function() {
   console.log('DOM 로드 완료');
-  initializeStarRating();
-  initializeOtherFeatures();
+
+  setTimeout(() => {
+    initializeStarRating();
+    initializeOtherFeatures();
+  }, 100);
 });
 
 function initializeStarRating() {
@@ -39,30 +42,38 @@ function initializeStarRating() {
     console.error('별점 요소를 찾을 수 없습니다');
     return;
   }
+
+  stars.forEach(star => {
+    star.replaceWith(star.cloneNode(true));
+  });
   
-  stars.forEach(function(star, index) {
-    const rating = index + 1;
+  const newStars = document.querySelectorAll('.star');
+  
+  newStars.forEach(function(star, index) {
+    const rating = parseInt(star.dataset.rating);
     
     function selectStar() {
       selectedRating = rating;
       if (ratingInput) ratingInput.value = rating;
-      updateStars(stars, rating);
+      updateStars(newStars, rating);
       updateRatingText(ratingText, rating);
       console.log('별점 설정됨:', rating);
     }
     
     star.addEventListener('click', function(e) {
       e.preventDefault();
+      e.stopPropagation();
       selectStar();
     });
     
     star.addEventListener('touchstart', function(e) {
       e.preventDefault();
+      e.stopPropagation();
       selectStar();
     });
     
     star.addEventListener('mouseenter', function() {
-      highlightStars(stars, rating);
+      highlightStars(newStars, rating);
     });
     
     star.addEventListener('keydown', function(e) {
@@ -76,7 +87,7 @@ function initializeStarRating() {
   const starRating = document.querySelector('.star-rating');
   if (starRating) {
     starRating.addEventListener('mouseleave', function() {
-      updateStars(stars, selectedRating);
+      updateStars(newStars, selectedRating);
     });
   }
   
@@ -250,24 +261,7 @@ async function handleReviewSubmit() {
     console.log('문서 저장 완료:', docRef.id);
     alert("후기가 등록되었습니다! 감사합니다 💖");
 
-    const reviewForm = document.getElementById("review-form");
-    if (reviewForm) reviewForm.reset();
-    
-    selectedRating = 0;
-    const ratingInput = document.getElementById("rating");
-    if (ratingInput) ratingInput.value = '';
-    
-    const stars = document.querySelectorAll('.star');
-    updateStars(stars, 0);
-    
-    const ratingText = document.querySelector('.rating-text');
-    updateRatingText(ratingText, 0);
-    
-    const imagePreview = document.getElementById("image-preview");
-    if (imagePreview) imagePreview.style.display = 'none';
-    
-    const uploadArea = document.querySelector('.image-upload-area');
-    if (uploadArea) uploadArea.style.display = 'block';
+    resetForm();
     
     lastVisible = null;
     const reviewsContainer = document.getElementById("reviews-container");
@@ -282,6 +276,27 @@ async function handleReviewSubmit() {
     if (loading) loading.style.display = 'none';
     if (submitBtn) submitBtn.disabled = false;
   }
+}
+
+function resetForm() {
+  const reviewForm = document.getElementById("review-form");
+  if (reviewForm) reviewForm.reset();
+  
+  selectedRating = 0;
+  const ratingInput = document.getElementById("rating");
+  if (ratingInput) ratingInput.value = '';
+  
+  const stars = document.querySelectorAll('.star');
+  updateStars(stars, 0);
+  
+  const ratingText = document.querySelector('.rating-text');
+  updateRatingText(ratingText, 0);
+  
+  const imagePreview = document.getElementById("image-preview");
+  if (imagePreview) imagePreview.style.display = 'none';
+  
+  const uploadArea = document.querySelector('.image-upload-area');
+  if (uploadArea) uploadArea.style.display = 'block';
 }
 
 async function loadReviews(reset = false, reviewsContainer, sortSelect) {
