@@ -4,21 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NEKORUNAIL</title>
-  <link rel="stylesheet" href="./style.css">
-  <script src="./script.js" type="module"></script>  
-  <script type="module" src="../nekorunail/public/optimized-firebase.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <script src="script.js" type="module"></script>
+  <script type="module" src="optimized-firebase.js"></script>
 </head>
 <body>
   <header class="hero">
-    <h1><a href="../nekorunail/public/admin.html">NEKORUNAIL</a></h1>
+    <h1><a href="admin.html">NEKORUNAIL</a></h1>
     <p>4, Gaya-daero 750beon-gil Busanjin-gu Busan 3floor</p>
     <nav>
       <ul>
         <li><a href="index.html">홈</a></li>
-        <li><a href="../nekorunail/public/gallery.html">갤러리</a></li>
-        <li><a href="../nekorunail/public/booking.html">예약</a></li>
-        <li><a href="../nekorunail/public/review.html">리뷰 남기기</a></li>
-        <li><a href="../nekorunail/public/come.html">찾아오시는 길</a></li>
+        <li><a href="gallery.html">갤러리</a></li>
+        <li><a href="booking.html">예약</a></li>
+        <li><a href="review.html">리뷰 남기기</a></li>
+        <li><a href="come.html">찾아오시는 길</a></li>
       </ul>
     </nav>
   </header>
@@ -28,37 +28,23 @@
     <div class="gallery-slider">
       <div class="gallery-card">
         <img src="9.jpeg" alt="nail art 1" loading="lazy">
-        <div class="info">
-          <h4>6월 하기 네일</h4>
-        </div>
+        <div class="info"><h4>6월 하기 네일</h4></div>
       </div>
       <div class="gallery-card">
         <img src="1.jpeg" alt="nail art 2" loading="lazy">
-        <div class="info">
-          <h4>reservation</h4>
-          <p>8.0</p>
-        </div>
+        <div class="info"><h4>reservation</h4><p>8.0</p></div>
       </div>
       <div class="gallery-card">
         <img src="2.jpeg" alt="nail art 3" loading="lazy">
-        <div class="info">
-          <h4>june art</h4>
-          <p>7.5</p>
-        </div>
+        <div class="info"><h4>june art</h4><p>7.5</p></div>
       </div>
       <div class="gallery-card">
         <img src="3.jpeg" alt="nail art 4" loading="lazy">
-        <div class="info">
-          <h4>june art</h4>
-          <p>8.2</p>
-        </div>
+        <div class="info"><h4>june art</h4><p>8.2</p></div>
       </div>
       <div class="gallery-card">
         <img src="5.jpeg" alt="nail art 5" loading="lazy">
-        <div class="info">
-          <h4>omakase</h4>
-          <p>9.0</p>
-        </div>
+        <div class="info"><h4>omakase</h4><p>9.0</p></div>
       </div>
     </div>
   </section>
@@ -73,7 +59,7 @@
       </div>
     </div>
     <div class="reviews-actions">
-      <a href="../nekorunail/public/review.html" class="view-more-btn">모든 후기 보기</a>
+      <a href="review.html" class="view-more-btn">모든 후기 보기</a>
     </div>
   </section>
 
@@ -83,10 +69,8 @@
 
   <script>
     let reviewsLoaded = false;
-
     document.addEventListener('DOMContentLoaded', function() {
       const reviewsSection = document.getElementById('customer-reviews');
-      
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting && !reviewsLoaded) {
@@ -96,10 +80,7 @@
           }
         });
       });
-      
-      if (reviewsSection) {
-        observer.observe(reviewsSection);
-      }
+      if (reviewsSection) observer.observe(reviewsSection);
     });
 
     async function loadFirebaseReviews() {
@@ -111,8 +92,8 @@
     }
 
     function displayNoReviews() {
-      const reviewsContainer = document.getElementById('reviews-container');
-      reviewsContainer.innerHTML = `
+      const container = document.getElementById('reviews-container');
+      container.innerHTML = `
         <div class="no-reviews">
           <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #4a5568;">아직 등록된 후기가 없습니다.</p>
           <p style="font-size: 1rem; color: hotpink;">첫 번째 후기를 남겨보세요! ✨</p>
@@ -121,8 +102,8 @@
     }
 
     function displayErrorMessage() {
-      const reviewsContainer = document.getElementById('reviews-container');
-      reviewsContainer.innerHTML = `
+      const container = document.getElementById('reviews-container');
+      container.innerHTML = `
         <div class="error-message">
           <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #dc2626;">후기를 불러오는데 실패했습니다.</p>
           <p style="color: #666;">잠시 후 다시 시도해주세요.</p>
@@ -136,16 +117,13 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
-      
       .review-preview {
         opacity: 0;
         transform: translateY(20px);
         animation: fadeInUp 0.6s ease forwards;
       }
-      
       .review-preview:nth-child(2) { animation-delay: 0.1s; }
       .review-preview:nth-child(3) { animation-delay: 0.2s; }
-      
       @keyframes fadeInUp {
         to {
           opacity: 1;
