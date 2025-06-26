@@ -47,36 +47,56 @@ function initializeStarRating() {
   stars.forEach(function(star, index) {
     const rating = index + 1;
     
+    // 클릭 이벤트
     star.addEventListener('click', function(e) {
       e.preventDefault();
+      e.stopPropagation();
       console.log('별 클릭:', rating);
-      selectedRating = rating;
-      if (ratingInput) ratingInput.value = rating;
-      updateStars(stars, rating);
-      updateRatingText(ratingText, rating);
+      setRating(rating, stars, ratingInput, ratingText);
     });
     
-    star.addEventListener('mouseenter', function() {
-      highlightStars(stars, rating);
-    });
-
-    star.addEventListener('touchstart', function(e) {
+    // 터치 이벤트 (모바일)
+    star.addEventListener('touchend', function(e) {
       e.preventDefault();
-      selectedRating = rating;
-      if (ratingInput) ratingInput.value = rating;
-      updateStars(stars, rating);
-      updateRatingText(ratingText, rating);
+      e.stopPropagation();
+      console.log('별 터치:', rating);
+      setRating(rating, stars, ratingInput, ratingText);
+    });
+    
+    // 마우스 호버 이벤트
+    star.addEventListener('mouseenter', function() {
+      if (!('ontouchstart' in window)) { // 터치 디바이스가 아닐 때만
+        highlightStars(stars, rating);
+      }
+    });
+    
+    // 키보드 접근성
+    star.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setRating(rating, stars, ratingInput, ratingText);
+      }
     });
   });
 
   const starRating = document.querySelector('.star-rating');
   if (starRating) {
     starRating.addEventListener('mouseleave', function() {
-      updateStars(stars, selectedRating);
+      if (!('ontouchstart' in window)) { // 터치 디바이스가 아닐 때만
+        updateStars(stars, selectedRating);
+      }
     });
   }
   
   console.log('별점 초기화 완료');
+}
+
+function setRating(rating, stars, ratingInput, ratingText) {
+  selectedRating = rating;
+  if (ratingInput) ratingInput.value = rating;
+  updateStars(stars, rating);
+  updateRatingText(ratingText, rating);
+  console.log('별점 설정됨:', rating);
 }
 
 function highlightStars(stars, rating) {
@@ -84,6 +104,8 @@ function highlightStars(stars, rating) {
     star.classList.remove('active', 'hover');
     if (index < rating) {
       star.classList.add('hover');
+    } else if (index < selectedRating) {
+      star.classList.add('active');
     }
   });
 }
