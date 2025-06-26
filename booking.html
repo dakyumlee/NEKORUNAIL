@@ -5,98 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>예약하기 - NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css" />
-  <script>
-    //예약 시스템
-    document.addEventListener("DOMContentLoaded", () => {
-      console.log('예약 페이지 로드 완료');
-      
-      const form = document.getElementById("reserve-form");
-      
-      function getLocalBookings() {
-        const stored = localStorage.getItem('nekorunail_bookings');
-        return stored ? JSON.parse(stored) : [];
-      }
-      
-      function saveLocalBooking(bookingData) {
-        const bookings = getLocalBookings();
-        bookings.unshift(bookingData); // 맨 앞에 추가 (최신순임)
-        localStorage.setItem('nekorunail_bookings', JSON.stringify(bookings));
-      }
-      
-      function checkTimeSlotAvailable(date, time) {
-        const bookings = getLocalBookings();
-        return !bookings.some(booking => 
-          booking.date === date && 
-          booking.time === time && 
-          booking.status !== 'cancelled'
-        );
-      }
-
-      if (form) {
-        form.addEventListener("submit", async (e) => {
-          e.preventDefault();
-
-          const name = document.getElementById("name").value.trim();
-          const phone = document.getElementById("phone").value.trim();
-          const date = document.getElementById("date").value;
-          const timeInputs = document.querySelectorAll('input[name="time"]:checked');
-          const time = timeInputs.length > 0 ? timeInputs[0].value : '';
-          
-          // 선택된 서비스들 가져오기
-          const serviceInputs = document.querySelectorAll('input[name="services"]:checked');
-          const services = Array.from(serviceInputs).map(input => input.value);
-          
-          // 특이사항
-          const notes = document.getElementById("notes").value.trim();
-
-          console.log('입력값 확인:', { name, phone, date, time, services, notes });
-
-          if (!name || !phone || !date || !time) {
-            alert("모든 필수 정보를 입력해주세요.");
-            return;
-          }
-
-          // 시간대 중복 체크
-          if (!checkTimeSlotAvailable(date, time)) {
-            alert("⚠️ 해당 날짜와 시간에는 이미 예약이 존재합니다.\n다른 시간대를 선택해주세요.");
-            return;
-          }
-
-          try {
-            // 예약 데이터 생성
-            const bookingData = {
-              id: Date.now(),
-              name,
-              phone,
-              date,
-              time,
-              services: services.length > 0 ? services : ['기본 케어'],
-              notes: notes || '',
-              status: 'pending',
-              createdAt: new Date().toISOString()
-            };
-
-            console.log('예약 데이터 저장 시작:', bookingData);
-            
-            saveLocalBooking(bookingData);
-
-            console.log('예약 저장 완료!');
-            
-            const servicesText = services.length > 0 ? services.join(', ') : '기본 케어';
-            alert(`✅ 예약 완료!\n\n👤 ${name}\n📞 ${phone}\n📅 ${date} ${time}\n💅 ${servicesText}\n\n곧 확인 연락을 드릴 예정입니다!`);
-            
-            form.reset();
-            
-          } catch (err) {
-            console.error("예약 실패:", err);
-            alert("예약 처리 중 오류가 발생했습니다: " + err.message);
-          }
-        });
-      }
-      
-      console.log('예약 시스템 초기화 완료');
-    });
-  </script>
   <style>
     .booking-hero {
       color: rgb(0, 0, 0);
@@ -317,6 +225,16 @@
       background: #e9ecef;
     }
     
+    .time-option.unavailable label {
+      background: #f1f3f4;
+      color: #9aa0a6;
+      cursor: not-allowed;
+    }
+    
+    .time-option.unavailable input[type="radio"] {
+      pointer-events: none;
+    }
+    
     .special-requests {
       background: linear-gradient(135deg, #ffe1fd, #ffb3f5);
       border-radius: 15px;
@@ -383,6 +301,12 @@
       transform: translateY(-1px);
     }
     
+    .submit-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
     .loading-spinner {
       display: none;
       width: 20px;
@@ -432,6 +356,43 @@
     .info-card p {
       color: #666;
       line-height: 1.6;
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      color: white;
+      font-weight: 600;
+      z-index: 10001;
+      animation: slideInRight 0.3s ease;
+      max-width: 300px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .notification.success {
+      background: #10b981;
+    }
+    
+    .notification.error {
+      background: #ef4444;
+    }
+
+    .notification.warning {
+      background: #f59e0b;
+    }
+    
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
     }
     
     @media (max-width: 768px) {
@@ -630,5 +591,249 @@
   <footer>
     <p>NEKORUNAIL ⎜ Instagram @nekorunail ⎜ 2025</p>
   </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      getDocs, 
+      query, 
+      where, 
+      serverTimestamp 
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
+      authDomain: "nekorunail.firebaseapp.com",
+      projectId: "nekorunail",
+      storageBucket: "nekorunail.appspot.com",
+      messagingSenderId: "571846382457",
+      appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
+      measurementId: "G-MW8CBHGSLG"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    function showNotification(message, type = 'success') {
+      const existing = document.querySelector('.notification');
+      if (existing) existing.remove();
+      
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.textContent = message;
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 4000);
+      
+      notification.addEventListener('click', () => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      });
+    }
+
+    async function getFirebaseBookings() {
+      try {
+        const q = query(collection(db, "bookings"));
+        const snapshot = await getDocs(q);
+        const bookings = [];
+        
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          bookings.push({
+            id: doc.id,
+            ...data
+          });
+        });
+        
+        return bookings;
+      } catch (error) {
+        console.error('예약 데이터 로드 실패:', error);
+        return [];
+      }
+    }
+
+    async function saveFirebaseBooking(bookingData) {
+      try {
+        const docRef = await addDoc(collection(db, "bookings"), {
+          ...bookingData,
+          createdAt: serverTimestamp()
+        });
+        console.log('예약 저장 완료:', docRef.id);
+        return docRef.id;
+      } catch (error) {
+        console.error('예약 저장 실패:', error);
+        throw error;
+      }
+    }
+
+    async function checkTimeSlotAvailable(date, time) {
+      try {
+        const q = query(
+          collection(db, "bookings"), 
+          where("date", "==", date),
+          where("time", "==", time),
+          where("status", "!=", "cancelled")
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.empty;
+      } catch (error) {
+        console.error('시간대 체크 실패:', error);
+        return true;
+      }
+    }
+
+    async function updateAvailableTimeSlots(selectedDate) {
+      if (!selectedDate) return;
+
+      try {
+        const q = query(
+          collection(db, "bookings"),
+          where("date", "==", selectedDate),
+          where("status", "!=", "cancelled")
+        );
+        const snapshot = await getDocs(q);
+        
+        const bookedTimes = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          bookedTimes.push(data.time);
+        });
+
+        const timeOptions = document.querySelectorAll('.time-option');
+        timeOptions.forEach(option => {
+          option.classList.remove('unavailable');
+          const input = option.querySelector('input');
+          const label = option.querySelector('label');
+          
+          input.disabled = false;
+          label.style.background = '#f8f9fa';
+          label.style.color = '#333';
+          label.style.cursor = 'pointer';
+        });
+
+        bookedTimes.forEach(time => {
+          const timeInput = document.querySelector(`input[value="${time}"]`);
+          if (timeInput) {
+            const timeOption = timeInput.closest('.time-option');
+            const label = timeInput.nextElementSibling;
+            
+            timeOption.classList.add('unavailable');
+            timeInput.disabled = true;
+            timeInput.checked = false;
+            
+            label.style.background = '#f1f3f4';
+            label.style.color = '#9aa0a6';
+            label.style.cursor = 'not-allowed';
+            label.title = '이미 예약된 시간입니다';
+          }
+        });
+
+      } catch (error) {
+        console.error('시간대 업데이트 실패:', error);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log('Firebase Booking 페이지 로드 완료');
+      
+      const form = document.getElementById("reserve-form");
+      const dateInput = document.getElementById("date");
+
+      if (dateInput) {
+        dateInput.addEventListener("change", (e) => {
+          updateAvailableTimeSlots(e.target.value);
+        });
+
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.min = today;
+      }
+
+      if (form) {
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const name = document.getElementById("name").value.trim();
+          const phone = document.getElementById("phone").value.trim();
+          const date = document.getElementById("date").value;
+          const timeInputs = document.querySelectorAll('input[name="time"]:checked');
+          const time = timeInputs.length > 0 ? timeInputs[0].value : '';
+          
+          const serviceInputs = document.querySelectorAll('input[name="services"]:checked');
+          const services = Array.from(serviceInputs).map(input => input.value);
+          
+          const notes = document.getElementById("notes").value.trim();
+
+          console.log('입력값 확인:', { name, phone, date, time, services, notes });
+
+          if (!name || !phone || !date || !time) {
+            showNotification("모든 필수 정보를 입력해주세요.", 'error');
+            return;
+          }
+
+          const submitBtn = document.getElementById("submit-btn");
+          const btnText = submitBtn.querySelector('.btn-text');
+          const loading = submitBtn.querySelector('.loading-spinner');
+
+          try {
+            btnText.style.display = 'none';
+            loading.style.display = 'inline-block';
+            submitBtn.disabled = true;
+
+            const isAvailable = await checkTimeSlotAvailable(date, time);
+            if (!isAvailable) {
+              showNotification("⚠️ 해당 날짜와 시간에는 이미 예약이 존재합니다.\n다른 시간대를 선택해주세요.", 'warning');
+              await updateAvailableTimeSlots(date);
+              return;
+            }
+
+            const bookingData = {
+              name,
+              phone,
+              date,
+              time,
+              services: services.length > 0 ? services : ['기본 케어'],
+              notes: notes || '',
+              status: 'pending'
+            };
+
+            console.log('Firebase에 예약 데이터 저장 시작:', bookingData);
+            
+            const bookingId = await saveFirebaseBooking(bookingData);
+
+            console.log('예약 저장 완료! ID:', bookingId);
+            
+            const servicesText = services.length > 0 ? services.join(', ') : '기본 케어';
+            
+            showNotification(`✅ 예약 완료!\n\n👤 ${name}\n📞 ${phone}\n📅 ${date} ${time}\n💅 ${servicesText}\n\n곧 확인 연락을 드릴 예정입니다!`, 'success');
+            
+            form.reset();
+            
+            await updateAvailableTimeSlots(date);
+            
+          } catch (err) {
+            console.error("예약 실패:", err);
+            showNotification(`예약 처리 중 오류가 발생했습니다: ${err.message}`, 'error');
+          } finally {
+            btnText.style.display = 'inline';
+            loading.style.display = 'none';
+            submitBtn.disabled = false;
+          }
+        });
+      }
+      
+      console.log('Firebase Booking 시스템 초기화 완료');
+    });
+
+    console.log('Firebase Booking 모듈 로드 완료');
+  </script>
 </body>
 </html>

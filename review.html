@@ -5,328 +5,231 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>리뷰 - NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css">
-  <script>
-    let selectedRating = 0;
+  <style>
+    .reviews-display-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 20px;
+      margin: 2rem auto;
+      max-width: 1000px;
+    }
 
-    document.addEventListener("DOMContentLoaded", function() {
-      console.log('페이지 로드 시작');
-      
-      // 별점 초기화
-      initStars();
-      
-      // 이벤트 리스너 설정
-      setupEventListeners();
-      
-      // 기존 리뷰 로드
-      loadReviews();
-      
-      console.log('모든 초기화 완료!');
-    });
+    #reviews-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 700px;
+    }
 
-    function initStars() {
-      const starRating = document.getElementById('star-rating');
-      if (!starRating) {
-        console.error('별점 요소를 찾을 수 없습니다');
-        return;
+    .review-box {
+      width: 100%;
+      max-width: 700px;
+      background: white;
+      border-radius: 18px;
+      padding: 2rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      border-left: 4px solid hotpink;
+      transition: all 0.3s ease;
+      margin: 0 auto;
+    }
+
+    .review-box:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    }
+
+    .no-reviews, .error-message, .loading-reviews {
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+      padding: 3rem 2rem;
+      color: #718096;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin: 0 auto;
+    }
+
+    .loading-reviews {
+      font-size: 1.1rem;
+      color: #666;
+    }
+
+    .star-rating {
+      display: flex;
+      gap: 0.3rem;
+      margin: 1rem 0;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .star {
+      font-size: 2rem;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+      opacity: 0.3;
+      transform: scale(1);
+      display: inline-block;
+      padding: 0.2rem;
+    }
+
+    .star:hover {
+      transform: scale(1.2);
+    }
+
+    .star.active {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    .reviews-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .reviews-sort select {
+      padding: 0.5rem 1rem;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      background: white;
+      font-size: 0.9rem;
+      font-family: 'MaruBuri', sans-serif;
+    }
+
+    #load-more-btn {
+      background: hotpink;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 2rem;
+      display: none;
+    }
+
+    #load-more-btn:hover {
+      background: #ff69b4;
+      transform: translateY(-2px);
+    }
+
+    .image-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      cursor: pointer;
+    }
+
+    .modal-content {
+      position: relative;
+      max-width: 90vw;
+      max-height: 90vh;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .modal-content img {
+      max-width: 100%;
+      max-height: 80vh;
+      display: block;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 2rem;
+      color: white;
+      cursor: pointer;
+      z-index: 10001;
+      background: rgba(0,0,0,0.5);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content .review-caption {
+      padding: 1rem;
+      text-align: center;
+      background: white;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .reviews-display-section {
+        padding: 1rem;
+        margin: 1rem;
       }
-      
-      starRating.innerHTML = `
-        <span class="star" onclick="selectRating(1)" style="font-size: 2rem; cursor: pointer; opacity: 0.3; margin: 0 0.2rem;">⭐</span>
-        <span class="star" onclick="selectRating(2)" style="font-size: 2rem; cursor: pointer; opacity: 0.3; margin: 0 0.2rem;">⭐</span>
-        <span class="star" onclick="selectRating(3)" style="font-size: 2rem; cursor: pointer; opacity: 0.3; margin: 0 0.2rem;">⭐</span>
-        <span class="star" onclick="selectRating(4)" style="font-size: 2rem; cursor: pointer; opacity: 0.3; margin: 0 0.2rem;">⭐</span>
-        <span class="star" onclick="selectRating(5)" style="font-size: 2rem; cursor: pointer; opacity: 0.3; margin: 0 0.2rem;">⭐</span>
-      `;
-      console.log('별점 생성 완료');
-    }
 
-    function setupEventListeners() {
-      const form = document.getElementById("review-form");
-      const imageInput = document.getElementById("review-image");
-      
-      if (form) {
-        form.addEventListener("submit", handleSubmit);
-        console.log('폼 이벤트 리스너 설정 완료');
-      }
-      
-      if (imageInput) {
-        imageInput.addEventListener("change", handleImagePreview);
-        console.log('이미지 이벤트 리스너 설정 완료');
-      }
-    }
-
-    // 별점 선택 함수
-    function selectRating(rating) {
-      selectedRating = rating;
-      document.getElementById('rating').value = rating;
-      
-      const stars = document.querySelectorAll('.star');
-      stars.forEach((star, index) => {
-        star.style.opacity = index < rating ? '1' : '0.3';
-      });
-      
-      const texts = ['별을 클릭하여 평점을 매겨주세요', '⭐ 별로예요', '⭐⭐ 그저 그래요', '⭐⭐⭐ 보통이에요', '⭐⭐⭐⭐ 좋아요', '⭐⭐⭐⭐⭐ 최고예요!'];
-      document.querySelector('.rating-text').textContent = texts[rating];
-      console.log('별점 선택됨:', rating);
-    }
-
-    function handleImagePreview(e) {
-      const file = e.target.files[0];
-      const preview = document.getElementById("image-preview");
-      const previewImg = document.getElementById("preview-img");
-      
-      if (file) {
-        if (file.size > 5 * 1024 * 1024) {
-          alert("파일 크기는 5MB 이하여야 합니다.");
-          e.target.value = '';
-          return;
-        }
-
-        if (!file.type.startsWith('image/')) {
-          alert("이미지 파일만 업로드 가능합니다.");
-          e.target.value = '';
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          previewImg.src = e.target.result;
-          preview.style.display = 'block';
-          document.querySelector('.image-upload-area').style.display = 'none';
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-
-    async function handleSubmit(e) {
-      e.preventDefault();
-      console.log('폼 제출 시작');
-      
-      const name = document.getElementById("reviewer").value.trim();
-      const content = document.getElementById("review-content").value.trim();
-      const rating = selectedRating;
-      const imageInput = document.getElementById("review-image");
-      const imageFile = imageInput ? imageInput.files[0] : null;
-      
-      console.log('입력값 확인:', { name, content, rating, hasImage: !!imageFile });
-      
-      // 유효성 검사
-      if (!name) {
-        alert("이름을 입력해주세요.");
-        return;
-      }
-      
-      if (!content) {
-        alert("후기 내용을 입력해주세요.");
-        return;
-      }
-      
-      if (!rating || rating < 1 || rating > 5) {
-        alert("별점을 선택해주세요.");
-        return;
+      .review-box {
+        padding: 1.5rem;
       }
 
-      const submitBtn = document.getElementById("submit-btn");
-      const originalText = submitBtn.textContent;
-      
-      try {
-        submitBtn.textContent = "등록 중...";
-        submitBtn.disabled = true;
-        
-        let imageUrl = null;
-
-        // 이미지가 있으면 Base64로 변환해서 저장
-        if (imageFile) {
-          console.log('이미지 처리 시작...');
-          imageUrl = await fileToBase64(imageFile);
-          console.log('이미지 처리 완료');
-        }
-
-        // 리뷰 데이터 생성
-        const reviewData = {
-          id: Date.now(), // 간단한 ID 생성
-          name,
-          content,
-          rating,
-          imageUrl,
-          createdAt: new Date().toISOString()
-        };
-        
-        // 로컬스토리지에 저장
-        console.log('로컬스토리지에 저장 시작...');
-        saveReview(reviewData);
-        
-        console.log('리뷰 저장 완료!');
-        alert("후기가 등록되었습니다! 감사합니다 💖");
-        
-        // 폼 초기화
-        resetForm();
-        
-        // 리뷰 목록 새로고침
-        loadReviews();
-
-      } catch (error) {
-        console.error("리뷰 등록 실패:", error);
-        alert("후기 등록 중 오류가 발생했습니다: " + error.message);
-      } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
+      .star {
+        font-size: 1.8rem;
       }
-    }
 
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-      });
-    }
-
-    function saveReview(reviewData) {
-      // 기존 리뷰들 가져오기
-      const existingReviews = getReviews();
-      
-      // 새 리뷰 추가
-      existingReviews.unshift(reviewData); // 맨 앞에 추가 (최신순)
-      
-      // 로컬스토리지에 저장
-      localStorage.setItem('nekorunail_reviews', JSON.stringify(existingReviews));
-    }
-
-    function getReviews() {
-      const stored = localStorage.getItem('nekorunail_reviews');
-      return stored ? JSON.parse(stored) : [];
-    }
-
-    function resetForm() {
-      document.getElementById("review-form").reset();
-      selectedRating = 0;
-      document.getElementById('rating').value = '';
-      
-      const stars = document.querySelectorAll('.star');
-      stars.forEach(star => star.style.opacity = '0.3');
-      document.querySelector('.rating-text').textContent = '별을 클릭하여 평점을 매겨주세요';
-      
-      const preview = document.getElementById("image-preview");
-      if (preview) preview.style.display = 'none';
-      const uploadArea = document.querySelector('.image-upload-area');
-      if (uploadArea) uploadArea.style.display = 'block';
-    }
-
-    function loadReviews() {
-      console.log('리뷰 로드 시작...');
-      
-      try {
-        const reviewsContainer = document.getElementById("reviews-container");
-        if (!reviewsContainer) {
-          console.log('리뷰 컨테이너 요소를 찾을 수 없습니다');
-          return;
-        }
-        
-        const reviews = getReviews();
-        console.log('가져온 리뷰 수:', reviews.length);
-        
-        reviewsContainer.innerHTML = '';
-        
-        if (reviews.length === 0) {
-          reviewsContainer.innerHTML = `
-            <div class="no-reviews" style="
-              max-width: 600px;
-              width: 100%;
-              text-align: center;
-              padding: 3rem 2rem;
-              color: #718096;
-              background: white;
-              border-radius: 18px;
-              box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            ">
-              <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #4a5568;">아직 등록된 후기가 없습니다.</p>
-              <p style="font-size: 1rem; color: hotpink;">첫 번째 후기를 남겨보세요! ✨</p>
-            </div>
-          `;
-          return;
-        }
-        
-        reviews.forEach(function(data) {
-          const reviewBox = document.createElement("div");
-          reviewBox.className = "review-box";
-          reviewBox.style.cssText = `
-            max-width: 700px;
-            width: 100%;
-            margin: 0 auto;
-            background: white;
-            border-radius: 18px;
-            padding: 2rem;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            border-left: 4px solid hotpink;
-            transition: all 0.3s ease;
-          `;
-          
-          const createdAt = new Date(data.createdAt);
-          const dateString = createdAt.toLocaleDateString('ko-KR');
-          
-          const rating = data.rating || 5;
-          const starsDisplay = '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
-          
-          const imageHtml = data.imageUrl ? 
-            `<div style="text-align: center; margin-top: 1rem;">
-               <img src="${data.imageUrl}" alt="후기 사진" style="max-width: 200px; max-height: 150px; border-radius: 8px;" />
-             </div>` : '';
-          
-          reviewBox.innerHTML = `
-            <div class="review-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-              <strong class="review-author" style="font-weight: 700; color: hotpink; font-size: 1.1rem;">👤 ${data.name}</strong>
-              <span class="review-date" style="color: #718096; font-size: 0.9rem;">📅 ${dateString}</span>
-            </div>
-            <div class="review-rating" style="font-size: 1.2rem; margin-bottom: 1rem; color: #ffd700;">${starsDisplay}</div>
-            <div class="review-content" style="color: #4a5568; line-height: 1.6; margin-bottom: 1.5rem;">${data.content}</div>
-            ${imageHtml}
-          `;
-          
-          reviewsContainer.appendChild(reviewBox);
-        });
-        
-        console.log('리뷰 로드 완료!');
-        
-      } catch (error) {
-        console.error("리뷰 로드 실패:", error);
-        const reviewsContainer = document.getElementById("reviews-container");
-        if (reviewsContainer) {
-          reviewsContainer.innerHTML = `
-            <div class="error-message">
-              <p>후기를 불러오는데 실패했습니다.</p>
-              <p>오류: ${error.message}</p>
-            </div>
-          `;
-        }
+      .reviews-controls {
+        flex-direction: column;
+        gap: 0.5rem;
       }
     }
-
-    function removeImage() {
-      document.getElementById("review-image").value = '';
-      document.getElementById("image-preview").style.display = 'none';
-      document.querySelector('.image-upload-area').style.display = 'block';
-    }
-  </script>
+  </style>
 </head>
 <body>
   <header class="hero">
     <nav>
-        <ul>
-          <li><a href="index.html">홈</a></li>
-          <li><a href="gallery.html">갤러리</a></li>
-          <li><a href="booking.html">예약</a></li>
-          <li><a href="review.html">리뷰 남기기</a></li>
-          <li><a href="come.html">찾아오시는 길</a></li>
-        </ul>
-      </nav>
-      <br><br>
+      <ul>
+        <li><a href="index.html">홈</a></li>
+        <li><a href="gallery.html">갤러리</a></li>
+        <li><a href="booking.html">예약</a></li>
+        <li><a href="review.html">리뷰 남기기</a></li>
+        <li><a href="come.html">찾아오시는 길</a></li>
+      </ul>
+    </nav>
+    <br><br>
     <h1>리뷰</h1>
     <p>고객님의 소중한 후기를 남겨주세요</p>
   </header>
 
-  <section class="review-form-section" style="display: flex; justify-content: center; padding: 2rem; min-height: 80vh;">
+  <section class="review-form-section" style="display: flex; justify-content: center; padding: 2rem;">
     <div class="form-container" style="
       max-width: 600px; 
       width: 100%; 
@@ -356,8 +259,7 @@
         
         <div class="form-group" style="text-align: center; margin-bottom: 1.5rem;">
           <label for="rating" style="display: block; margin-bottom: 0.8rem; color: #333; font-weight: 600; font-size: 1.1rem;">별점</label>
-          <div class="star-rating" id="star-rating" style="display: flex; justify-content: center; margin: 1rem 0;">
-           
+          <div class="star-rating" id="star-rating">
           </div>
           <input type="hidden" id="rating" name="rating" required />
           <p class="rating-text" style="text-align: center; margin: 0.5rem 0; color: #333; font-weight: 500;">별을 클릭하여 평점을 매겨주세요</p>
@@ -394,12 +296,15 @@
             transition: all 0.3s ease;
             cursor: pointer;
             background: #fafbfc;
+            position: relative;
           ">
             <input type="file" id="review-image" accept="image/*" style="
               position: absolute;
-              opacity: 0;
+              top: 0;
+              left: 0;
               width: 100%;
               height: 100%;
+              opacity: 0;
               cursor: pointer;
             " />
             <div class="upload-placeholder">
@@ -411,7 +316,7 @@
           <div id="image-preview" style="display: none; text-align: center; margin-top: 1rem;">
             <img id="preview-img" alt="미리보기" style="max-width: 200px; max-height: 150px; border-radius: 8px;" />
             <br>
-            <button type="button" onclick="removeImage()" style="margin-top: 0.5rem; background: #dc2626; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer;">사진 제거</button>
+            <button type="button" id="remove-image" style="margin-top: 0.5rem; background: #dc2626; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer;">사진 제거</button>
           </div>
         </div>
         
@@ -428,24 +333,495 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
           ">
-            후기 등록하기
+            <span class="btn-text">후기 등록하기</span>
+            <div class="loading-spinner" style="display: none;"></div>
           </button>
         </div>
       </form>
     </div>
   </section>
 
-  <section class="reviews-display-section" style="display: flex; flex-direction: column; align-items: center; padding: 2rem;">
-    <h3 style="text-align: center; margin-bottom: 2rem; font-size: 1.8rem; color: #333;">고객님들의 후기</h3>
-    <div id="reviews-container" style="max-width: 800px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
-      <div style="text-align: center; padding: 2rem;">
+  <section class="reviews-display-section">
+    <h3 style="text-align: center; margin-bottom: 1rem; font-size: 1.8rem; color: #333;">고객님들의 후기</h3>
+    
+    <div class="reviews-controls">
+      <div class="reviews-sort">
+        <label for="review-sort" style="margin-right: 0.5rem; font-weight: 600;">정렬:</label>
+        <select id="review-sort">
+          <option value="newest">최신순</option>
+          <option value="oldest">오래된순</option>
+          <option value="highest">별점 높은순</option>
+          <option value="lowest">별점 낮은순</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="reviews-container">
+      <div class="loading-reviews">
         <p>후기를 불러오는 중...</p>
       </div>
     </div>
+
+    <button id="load-more-btn">더 많은 후기 보기</button>
   </section>
 
   <footer>
     <p>NEKORUNAIL ⎜ Instagram @NEKORUnail ⎜ 2025</p>
   </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      getDocs, 
+      query, 
+      orderBy, 
+      serverTimestamp, 
+      limit, 
+      startAfter 
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    import { 
+      getStorage, 
+      ref, 
+      uploadBytes, 
+      getDownloadURL 
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
+      authDomain: "nekorunail.firebaseapp.com",
+      projectId: "nekorunail",
+      storageBucket: "nekorunail.appspot.com",
+      messagingSenderId: "571846382457",
+      appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
+      measurementId: "G-MW8CBHGSLG"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    let lastVisible = null;
+    let isLoading = false;
+    let selectedRating = 0;
+    const REVIEWS_PER_PAGE = 10;
+
+    document.addEventListener("DOMContentLoaded", function() {
+      console.log('Firebase Review 페이지 로드 완료');
+      initializeStarRating();
+      initializeOtherFeatures();
+    });
+
+    function initializeStarRating() {
+      const starRating = document.getElementById('star-rating');
+      const ratingInput = document.getElementById('rating');
+      const ratingText = document.querySelector('.rating-text');
+      
+      if (!starRating) return;
+      
+      starRating.innerHTML = `
+        <span class="star" data-rating="1">⭐</span>
+        <span class="star" data-rating="2">⭐</span>
+        <span class="star" data-rating="3">⭐</span>
+        <span class="star" data-rating="4">⭐</span>
+        <span class="star" data-rating="5">⭐</span>
+      `;
+      
+      const stars = starRating.querySelectorAll('.star');
+      
+      stars.forEach(function(star) {
+        const rating = parseInt(star.getAttribute('data-rating'));
+        
+        star.addEventListener('click', function() {
+          selectedRating = rating;
+          if (ratingInput) ratingInput.value = rating;
+          updateStars(stars, rating);
+          updateRatingText(ratingText, rating);
+        });
+        
+        star.addEventListener('mouseenter', function() {
+          highlightStars(stars, rating);
+        });
+      });
+
+      starRating.addEventListener('mouseleave', function() {
+        updateStars(stars, selectedRating);
+      });
+    }
+
+    function highlightStars(stars, rating) {
+      stars.forEach(function(star, index) {
+        if (index < rating) {
+          star.style.opacity = '0.8';
+          star.style.transform = 'scale(1.15)';
+        } else {
+          star.style.opacity = '0.3';
+          star.style.transform = 'scale(1)';
+        }
+      });
+    }
+
+    function updateStars(stars, rating) {
+      stars.forEach(function(star, index) {
+        if (index < rating) {
+          star.style.opacity = '1';
+          star.style.transform = 'scale(1.1)';
+        } else {
+          star.style.opacity = '0.3';
+          star.style.transform = 'scale(1)';
+        }
+      });
+    }
+
+    function updateRatingText(ratingText, rating) {
+      if (!ratingText) return;
+      
+      const texts = [
+        '별을 클릭하여 평점을 매겨주세요',
+        '⭐ 별로예요',
+        '⭐⭐ 그저 그래요',
+        '⭐⭐⭐ 보통이에요',
+        '⭐⭐⭐⭐ 좋아요',
+        '⭐⭐⭐⭐⭐ 최고예요!'
+      ];
+      
+      ratingText.textContent = texts[rating] || texts[0];
+    }
+
+    async function initializeOtherFeatures() {
+      const reviewForm = document.getElementById("review-form");
+      const reviewsContainer = document.getElementById("reviews-container");
+      const imageInput = document.getElementById("review-image");
+      const sortSelect = document.getElementById("review-sort");
+      const loadMoreBtn = document.getElementById("load-more-btn");
+
+      setupImagePreview();
+
+      try {
+        await loadReviews(true);
+      } catch (error) {
+        console.error('초기 리뷰 로드 실패:', error);
+      }
+
+      if (sortSelect) {
+        sortSelect.addEventListener("change", async function() {
+          lastVisible = null;
+          await loadReviews(true);
+        });
+      }
+
+      if (loadMoreBtn) {
+        loadMoreBtn.addEventListener("click", function() {
+          loadReviews(false);
+        });
+      }
+
+      if (reviewForm) {
+        reviewForm.addEventListener("submit", async function(e) {
+          e.preventDefault();
+          await handleReviewSubmit();
+        });
+      }
+    }
+
+    function setupImagePreview() {
+      const imageInput = document.getElementById("review-image");
+      const imagePreview = document.getElementById("image-preview");
+      const previewImg = document.getElementById("preview-img");
+      const removeImageBtn = document.getElementById("remove-image");
+      
+      if (!imageInput) return;
+      
+      imageInput.addEventListener("change", function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          if (file.size > 5 * 1024 * 1024) {
+            alert("파일 크기는 5MB 이하여야 합니다.");
+            imageInput.value = '';
+            return;
+          }
+
+          if (!file.type.startsWith('image/')) {
+            alert("이미지 파일만 업로드 가능합니다.");
+            imageInput.value = '';
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            if (previewImg) previewImg.src = e.target.result;
+            if (imagePreview) imagePreview.style.display = 'block';
+            const uploadArea = document.querySelector('.image-upload-area');
+            if (uploadArea) uploadArea.style.display = 'none';
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      if (removeImageBtn) {
+        removeImageBtn.addEventListener("click", function() {
+          imageInput.value = '';
+          if (imagePreview) imagePreview.style.display = 'none';
+          const uploadArea = document.querySelector('.image-upload-area');
+          if (uploadArea) uploadArea.style.display = 'block';
+        });
+      }
+    }
+
+    async function handleReviewSubmit() {
+      const name = document.getElementById("reviewer").value.trim();
+      const content = document.getElementById("review-content").value.trim();
+      const rating = selectedRating;
+      const imageInput = document.getElementById("review-image");
+      const imageFile = imageInput ? imageInput.files[0] : null;
+      
+      if (!name || !content) {
+        alert("이름과 후기 내용을 입력해주세요.");
+        return;
+      }
+
+      if (!rating || rating < 1 || rating > 5) {
+        alert("별점을 선택해주세요.");
+        return;
+      }
+
+      const submitBtn = document.getElementById("submit-btn");
+      const btnText = submitBtn.querySelector('.btn-text');
+      const loading = submitBtn.querySelector('.loading-spinner');
+
+      try {
+        if (btnText) btnText.style.display = 'none';
+        if (loading) loading.style.display = 'inline-block';
+        if (submitBtn) submitBtn.disabled = true;
+
+        let imageUrl = null;
+
+        if (imageFile) {
+          console.log('이미지 업로드 시작');
+          const imageRef = ref(storage, `reviews/${Date.now()}_${imageFile.name}`);
+          await uploadBytes(imageRef, imageFile);
+          imageUrl = await getDownloadURL(imageRef);
+          console.log('이미지 업로드 완료:', imageUrl);
+        }
+
+        console.log('Firestore에 데이터 저장 시작');
+        const docRef = await addDoc(collection(db, "reviews"), {
+          name,
+          content,
+          rating,
+          imageUrl,
+          createdAt: serverTimestamp()
+        });
+        
+        console.log('문서 저장 완료:', docRef.id);
+        alert("후기가 등록되었습니다! 감사합니다 💖");
+
+        resetForm();
+        
+        lastVisible = null;
+        await loadReviews(true);
+
+      } catch (error) {
+        console.error("후기 등록 실패:", error);
+        alert("후기 등록 중 오류가 발생했습니다: " + error.message);
+      } finally {
+        if (btnText) btnText.style.display = 'inline';
+        if (loading) loading.style.display = 'none';
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    }
+
+    function resetForm() {
+      const reviewForm = document.getElementById("review-form");
+      if (reviewForm) reviewForm.reset();
+      
+      selectedRating = 0;
+      const ratingInput = document.getElementById("rating");
+      if (ratingInput) ratingInput.value = '';
+      
+      const stars = document.querySelectorAll('.star');
+      updateStars(stars, 0);
+      
+      const ratingText = document.querySelector('.rating-text');
+      updateRatingText(ratingText, 0);
+      
+      const imagePreview = document.getElementById("image-preview");
+      if (imagePreview) imagePreview.style.display = 'none';
+      
+      const uploadArea = document.querySelector('.image-upload-area');
+      if (uploadArea) uploadArea.style.display = 'block';
+    }
+
+    async function loadReviews(reset = false) {
+      if (isLoading) return;
+      isLoading = true;
+
+      const reviewsContainer = document.getElementById("reviews-container");
+      const loadMoreBtn = document.getElementById("load-more-btn");
+
+      try {
+        if (reset) {
+          if (reviewsContainer) {
+            reviewsContainer.innerHTML = '<div class="loading-reviews">후기를 불러오는 중...</div>';
+          }
+          lastVisible = null;
+        }
+
+        const sortSelect = document.getElementById("review-sort");
+        const sortValue = sortSelect ? sortSelect.value : 'newest';
+        let orderField = 'createdAt';
+        let orderDirection = 'desc';
+
+        switch (sortValue) {
+          case 'oldest':
+            orderDirection = 'asc';
+            break;
+          case 'highest':
+            orderField = 'rating';
+            orderDirection = 'desc';
+            break;
+          case 'lowest':
+            orderField = 'rating';
+            orderDirection = 'asc';
+            break;
+        }
+        
+        let q;
+        if (lastVisible) {
+          q = query(
+            collection(db, "reviews"), 
+            orderBy(orderField, orderDirection),
+            startAfter(lastVisible),
+            limit(REVIEWS_PER_PAGE)
+          );
+        } else {
+          q = query(
+            collection(db, "reviews"), 
+            orderBy(orderField, orderDirection),
+            limit(REVIEWS_PER_PAGE)
+          );
+        }
+
+        const snapshot = await getDocs(q);
+
+        if (reset && reviewsContainer) {
+          reviewsContainer.innerHTML = '';
+        }
+
+        if (snapshot.empty && reset) {
+          if (reviewsContainer) {
+            reviewsContainer.innerHTML = `
+              <div class="no-reviews">
+                <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #4a5568;">아직 등록된 후기가 없습니다.</p>
+                <p style="font-size: 1rem; color: hotpink;">첫 번째 후기를 남겨보세요! ✨</p>
+              </div>
+            `;
+          }
+          if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+          return;
+        }
+
+        snapshot.forEach(function(doc) {
+          const data = doc.data();
+          const reviewBox = document.createElement("div");
+          reviewBox.className = "review-box";
+          
+          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const dateString = createdAt.toLocaleDateString('ko-KR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+
+          const rating = data.rating || 5;
+          const starsDisplay = '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
+
+          const imageHtml = data.imageUrl ? 
+            `<div class="review-image-container" style="text-align: center; margin-top: 1rem;">
+               <img src="${data.imageUrl}" alt="후기 사진" class="review-image" onclick="openImageModal('${data.imageUrl}', '${data.name}님의 후기')" style="
+                 max-width: 100%;
+                 max-height: 300px;
+                 border-radius: 10px;
+                 cursor: pointer;
+                 box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                 transition: all 0.3s ease;
+               " />
+             </div>` : '';
+
+          reviewBox.innerHTML = `
+            <div class="review-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <strong class="review-author" style="font-weight: 700; color: hotpink; font-size: 1.1rem;">👤 ${data.name}</strong>
+              <span class="review-date" style="color: #718096; font-size: 0.9rem;">📅 ${dateString}</span>
+            </div>
+            <div class="review-rating" style="font-size: 1.2rem; margin-bottom: 1rem; color: #ffd700;">${starsDisplay}</div>
+            <div class="review-content" style="color: #4a5568; line-height: 1.6; margin-bottom: 1.5rem;">${data.content}</div>
+            ${imageHtml}
+          `;
+          
+          if (reviewsContainer) {
+            reviewsContainer.appendChild(reviewBox);
+          }
+          lastVisible = doc;
+        });
+
+        if (loadMoreBtn) {
+          if (snapshot.docs.length === REVIEWS_PER_PAGE) {
+            loadMoreBtn.style.display = 'block';
+          } else {
+            loadMoreBtn.style.display = 'none';
+          }
+        }
+
+      } catch (error) {
+        console.error("후기 로드 실패:", error);
+        if (reset && reviewsContainer) {
+          reviewsContainer.innerHTML = `
+            <div class="error-message">
+              <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #dc2626;">후기를 불러오는데 실패했습니다.</p>
+              <p style="color: #666;">잠시 후 다시 시도해주세요.</p>
+            </div>
+          `;
+        }
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    window.openImageModal = function(imageUrl, caption) {
+      const modal = document.createElement('div');
+      modal.className = 'image-modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <span class="close-modal">&times;</span>
+          <img src="${imageUrl}" alt="후기 사진 크게보기" />
+          <div class="review-caption">${caption}</div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      const closeModal = function() {
+        document.body.removeChild(modal);
+      };
+      
+      modal.querySelector('.close-modal').onclick = closeModal;
+      modal.onclick = function(e) {
+        if (e.target === modal) closeModal();
+      };
+      
+      // ESC 키로 닫기
+      const escHandler = function(e) {
+        if (e.key === 'Escape') {
+          closeModal();
+          document.removeEventListener('keydown', escHandler);
+        }
+      };
+      document.addEventListener('keydown', escHandler);
+    };
+
+    console.log('Firebase Review 시스템 초기화 완료');
+  </script>
 </body>
 </html>

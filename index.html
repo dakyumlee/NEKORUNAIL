@@ -6,70 +6,6 @@
   <title>NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css" />
   <script defer src="script.js"></script>
-  <script>
-    // 로컬스토리지에서 리뷰 가져오기 하 좀
-    function getLocalReviews() {
-      const stored = localStorage.getItem('nekorunail_reviews');
-      return stored ? JSON.parse(stored) : [];
-    }
-
-    function loadHomeReviews() {
-      try {
-        const reviewsContainer = document.getElementById('reviews-container');
-        
-        const reviews = getLocalReviews();
-        const recentReviews = reviews.slice(0, 5); // 최근 5개만
-        
-        reviewsContainer.innerHTML = '';
-        
-        if (recentReviews.length === 0) {
-          reviewsContainer.innerHTML = `
-            <div class="no-reviews">
-              <p>아직 등록된 후기가 없습니다.</p>
-              <p>첫 번째 후기를 남겨보세요! ✨</p>
-            </div>
-          `;
-          return;
-        }
-        
-        recentReviews.forEach(data => {
-          const reviewCard = document.createElement('div');
-          reviewCard.className = 'review-preview';
-          
-          const createdAt = new Date(data.createdAt);
-          const dateString = createdAt.toLocaleDateString('ko-KR');
-          
-          const rating = data.rating || 5;
-          const starsDisplay = '⭐'.repeat(rating);
-          
-          const imageHtml = data.imageUrl ? 
-            `<div class="review-image">
-               <img src="${data.imageUrl}" alt="후기 사진" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; float: left; margin-right: 1rem;" />
-             </div>` : '';
-          
-          reviewCard.innerHTML = `
-            ${imageHtml}
-            <div class="stars">${starsDisplay}</div>
-            <p style="line-height: 1.6; margin: 0.5rem 0; ${data.imageUrl ? 'min-height: 80px; display: flex; align-items: center;' : ''}">"${data.content}"</p>
-            <cite style="clear: both; display: block; margin-top: 1rem;">- ${data.name} (${dateString})</cite>
-          `;
-          
-          reviewsContainer.appendChild(reviewCard);
-        });
-        
-      } catch (error) {
-        console.error('후기 로드 오류:', error);
-        document.getElementById('reviews-container').innerHTML = `
-          <div class="error-message">
-            <p>후기를 불러오는데 실패했습니다.</p>
-            <p>잠시 후 다시 시도해주세요.</p>
-          </div>
-        `;
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', loadHomeReviews);
-  </script>
 </head>
 <body>
   <header class="hero">
@@ -142,5 +78,129 @@
   <footer>
     <p>NEKORUNAIL ⎜ Instagram @nekorunail ⎜ 2025</p>
   </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      getDocs, 
+      query, 
+      orderBy, 
+      limit 
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
+      authDomain: "nekorunail.firebaseapp.com",
+      projectId: "nekorunail",
+      storageBucket: "nekorunail.appspot.com",
+      messagingSenderId: "571846382457",
+      appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
+      measurementId: "G-MW8CBHGSLG"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadHomeReviews() {
+      try {
+        const reviewsContainer = document.getElementById('reviews-container');
+        
+        console.log('Firebase에서 홈페이지 리뷰 로드 시작');
+
+        const q = query(
+          collection(db, "reviews"), 
+          orderBy("createdAt", "desc"), 
+          limit(5)
+        );
+        const snapshot = await getDocs(q);
+        
+        console.log('리뷰 데이터 로드 완료:', snapshot.size, '개');
+        
+        reviewsContainer.innerHTML = '';
+        
+        if (snapshot.empty) {
+          reviewsContainer.innerHTML = `
+            <div class="no-reviews">
+              <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #4a5568;">아직 등록된 후기가 없습니다.</p>
+              <p style="font-size: 1rem; color: hotpink;">첫 번째 후기를 남겨보세요! ✨</p>
+            </div>
+          `;
+          return;
+        }
+        
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const reviewCard = document.createElement('div');
+          reviewCard.className = 'review-preview';
+          
+          const createdAt = data.createdAt && data.createdAt.toDate ? 
+            data.createdAt.toDate() : new Date();
+          const dateString = createdAt.toLocaleDateString('ko-KR');
+          
+          const rating = data.rating || 5;
+          const starsDisplay = '⭐'.repeat(rating);
+          
+          const imageHtml = data.imageUrl ? 
+            `<div class="review-image">
+               <img src="${data.imageUrl}" alt="후기 사진" style="
+                 width: 80px; 
+                 height: 80px; 
+                 object-fit: cover; 
+                 border-radius: 8px; 
+                 float: left; 
+                 margin-right: 1rem;
+                 box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+               " />
+             </div>` : '';
+          
+          reviewCard.innerHTML = `
+            ${imageHtml}
+            <div class="stars">${starsDisplay}</div>
+            <p style="
+              line-height: 1.6; 
+              margin: 0.5rem 0; 
+              ${data.imageUrl ? 'min-height: 80px; display: flex; align-items: center;' : ''}
+              color: #333;
+              font-size: 1rem;
+            ">"${data.content}"</p>
+            <cite style="
+              clear: both; 
+              display: block; 
+              margin-top: 1rem; 
+              font-style: normal; 
+              color: #666; 
+              font-weight: 500; 
+              font-size: 0.9rem;
+            ">- ${data.name} (${dateString})</cite>
+          `;
+          
+          reviewsContainer.appendChild(reviewCard);
+        });
+        
+        console.log('홈페이지 리뷰 렌더링 완료!');
+        
+      } catch (error) {
+        console.error('홈페이지 리뷰 로드 오류:', error);
+        const reviewsContainer = document.getElementById('reviews-container');
+        if (reviewsContainer) {
+          reviewsContainer.innerHTML = `
+            <div class="error-message">
+              <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #dc2626;">후기를 불러오는데 실패했습니다.</p>
+              <p style="color: #666;">잠시 후 다시 시도해주세요.</p>
+            </div>
+          `;
+        }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Firebase Index 페이지 로드 완료');
+      loadHomeReviews();
+    });
+
+    console.log('Firebase Index 시스템 초기화 완료');
+  </script>
 </body>
 </html>
