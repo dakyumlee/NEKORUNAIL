@@ -5,9 +5,97 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>예약하기 - NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css" />
-  <script defer src="booking.js"></script>
-  <script type="module">
-    import { db, storage } from './firebase.js';
+  <script>
+    //예약 시스템
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log('예약 페이지 로드 완료');
+      
+      const form = document.getElementById("reserve-form");
+      
+      function getLocalBookings() {
+        const stored = localStorage.getItem('nekorunail_bookings');
+        return stored ? JSON.parse(stored) : [];
+      }
+      
+      function saveLocalBooking(bookingData) {
+        const bookings = getLocalBookings();
+        bookings.unshift(bookingData); // 맨 앞에 추가 (최신순임)
+        localStorage.setItem('nekorunail_bookings', JSON.stringify(bookings));
+      }
+      
+      function checkTimeSlotAvailable(date, time) {
+        const bookings = getLocalBookings();
+        return !bookings.some(booking => 
+          booking.date === date && 
+          booking.time === time && 
+          booking.status !== 'cancelled'
+        );
+      }
+
+      if (form) {
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const name = document.getElementById("name").value.trim();
+          const phone = document.getElementById("phone").value.trim();
+          const date = document.getElementById("date").value;
+          const timeInputs = document.querySelectorAll('input[name="time"]:checked');
+          const time = timeInputs.length > 0 ? timeInputs[0].value : '';
+          
+          // 선택된 서비스들 가져오기
+          const serviceInputs = document.querySelectorAll('input[name="services"]:checked');
+          const services = Array.from(serviceInputs).map(input => input.value);
+          
+          // 특이사항
+          const notes = document.getElementById("notes").value.trim();
+
+          console.log('입력값 확인:', { name, phone, date, time, services, notes });
+
+          if (!name || !phone || !date || !time) {
+            alert("모든 필수 정보를 입력해주세요.");
+            return;
+          }
+
+          // 시간대 중복 체크
+          if (!checkTimeSlotAvailable(date, time)) {
+            alert("⚠️ 해당 날짜와 시간에는 이미 예약이 존재합니다.\n다른 시간대를 선택해주세요.");
+            return;
+          }
+
+          try {
+            // 예약 데이터 생성
+            const bookingData = {
+              id: Date.now(),
+              name,
+              phone,
+              date,
+              time,
+              services: services.length > 0 ? services : ['기본 케어'],
+              notes: notes || '',
+              status: 'pending',
+              createdAt: new Date().toISOString()
+            };
+
+            console.log('예약 데이터 저장 시작:', bookingData);
+            
+            saveLocalBooking(bookingData);
+
+            console.log('예약 저장 완료!');
+            
+            const servicesText = services.length > 0 ? services.join(', ') : '기본 케어';
+            alert(`✅ 예약 완료!\n\n👤 ${name}\n📞 ${phone}\n📅 ${date} ${time}\n💅 ${servicesText}\n\n곧 확인 연락을 드릴 예정입니다!`);
+            
+            form.reset();
+            
+          } catch (err) {
+            console.error("예약 실패:", err);
+            alert("예약 처리 중 오류가 발생했습니다: " + err.message);
+          }
+        });
+      }
+      
+      console.log('예약 시스템 초기화 완료');
+    });
   </script>
   <style>
     .booking-hero {
@@ -496,14 +584,14 @@
               </label>
             </div>
             <div class="service-option">
-              <input type="checkbox" id="service-art" name="services" value="아트 네일" />
+              <input type="checkbox" id="service-art" name="services" value="옴브레, 프렌치" />
               <label for="service-art">
                 옴브레, 프렌치
                 <div class="service-price">60,000원~</div>
               </label>
             </div>
             <div class="service-option">
-              <input type="checkbox" id="service-extension" name="services" value="연장" />
+              <input type="checkbox" id="service-extension" name="services" value="레퍼런스/프리핸드 아트" />
               <label for="service-extension">
                 레퍼런스/프리핸드 아트
                 <div class="service-price">상담 후 가격 안내</div>
