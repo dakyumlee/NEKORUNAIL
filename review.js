@@ -1,33 +1,51 @@
-import { db, storage } from './firebase.js';
-import {
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  orderBy,
-  serverTimestamp,
-  limit,
-  startAfter
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
+let db, storage;
+let collection, addDoc, getDocs, query, orderBy, serverTimestamp, limit, startAfter;
+let ref, uploadBytes, getDownloadURL;
 
 let lastVisible = null;
 let isLoading = false;
 let selectedRating = 0;
 const REVIEWS_PER_PAGE = 10;
 
-document.addEventListener("DOMContentLoaded", function() {
+async function initFirebase() {
+  try {
+    const { db: firebaseDb, storage: firebaseStorage } = await import('./firebase.js');
+    db = firebaseDb;
+    storage = firebaseStorage;
+    
+    const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js");
+    collection = firestoreModule.collection;
+    addDoc = firestoreModule.addDoc;
+    getDocs = firestoreModule.getDocs;
+    query = firestoreModule.query;
+    orderBy = firestoreModule.orderBy;
+    serverTimestamp = firestoreModule.serverTimestamp;
+    limit = firestoreModule.limit;
+    startAfter = firestoreModule.startAfter;
+    
+    const storageModule = await import("https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js");
+    ref = storageModule.ref;
+    uploadBytes = storageModule.uploadBytes;
+    getDownloadURL = storageModule.getDownloadURL;
+    
+    return true;
+  } catch (error) {
+    console.error("Firebase 초기화 실패:", error);
+    return false;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async function() {
   console.log('DOM 로드 완료');
   
   initializeStarRating();
   
-  setTimeout(function() {
-    initializeOtherFeatures();
-  }, 100);
+  const firebaseReady = await initFirebase();
+  if (firebaseReady) {
+    setTimeout(function() {
+      initializeOtherFeatures();
+    }, 100);
+  }
 });
 
 function initializeStarRating() {
@@ -47,7 +65,6 @@ function initializeStarRating() {
   stars.forEach(function(star, index) {
     const rating = index + 1;
     
-    // 클릭 이벤트
     star.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
@@ -55,22 +72,19 @@ function initializeStarRating() {
       setRating(rating, stars, ratingInput, ratingText);
     });
     
-    // 터치 이벤트 (모바일)
     star.addEventListener('touchend', function(e) {
       e.preventDefault();
       e.stopPropagation();
       console.log('별 터치:', rating);
       setRating(rating, stars, ratingInput, ratingText);
-    });
+    }, { passive: false });
     
-    // 마우스 호버 이벤트
     star.addEventListener('mouseenter', function() {
-      if (!('ontouchstart' in window)) { // 터치 디바이스가 아닐 때만
+      if (!('ontouchstart' in window)) {
         highlightStars(stars, rating);
       }
     });
     
-    // 키보드 접근성
     star.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -82,7 +96,7 @@ function initializeStarRating() {
   const starRating = document.querySelector('.star-rating');
   if (starRating) {
     starRating.addEventListener('mouseleave', function() {
-      if (!('ontouchstart' in window)) { // 터치 디바이스가 아닐 때만
+      if (!('ontouchstart' in window)) {
         updateStars(stars, selectedRating);
       }
     });
