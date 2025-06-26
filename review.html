@@ -5,50 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>리뷰 - NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css">
-  <script type="module">
-    // Firebase 직접 연결 테스트
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
-      authDomain: "nekorunail.firebaseapp.com",
-      projectId: "nekorunail",
-      storageBucket: "nekorunail.appspot.com",
-      messagingSenderId: "571846382457",
-      appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
-      measurementId: "G-MW8CBHGSLG"
-    };
-
+  <script>
     let selectedRating = 0;
-    let db, storage;
 
-    document.addEventListener("DOMContentLoaded", async function() {
+    document.addEventListener("DOMContentLoaded", function() {
       console.log('페이지 로드 시작');
       
-      try {
-        // Firebase 초기화
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        storage = getStorage(app);
-        console.log('Firebase 초기화 성공!');
-        
-        // 별점 초기화
-        initStars();
-        
-        // 이벤트 리스너 설정
-        setupEventListeners();
-        
-        // 기존 리뷰 로드
-        await loadReviews();
-        
-        console.log('모든 초기화 완료!');
-        
-      } catch (error) {
-        console.error('초기화 실패:', error);
-        alert('Firebase 연결에 실패했습니다: ' + error.message);
-      }
+      // 별점 초기화
+      initStars();
+      
+      setupEventListeners();
+      
+      // 기존 리뷰 로드
+      loadReviews();
+      
+      console.log('모든 초기화 완료!');
     });
 
     function initStars() {
@@ -83,8 +54,8 @@
       }
     }
 
-    // 전역 함수로 별점 선택
-    window.selectRating = function(rating) {
+    // 별점 선택 함수..
+    function selectRating(rating) {
       selectedRating = rating;
       document.getElementById('rating').value = rating;
       
@@ -96,7 +67,7 @@
       const texts = ['별을 클릭하여 평점을 매겨주세요', '⭐ 별로예요', '⭐⭐ 그저 그래요', '⭐⭐⭐ 보통이에요', '⭐⭐⭐⭐ 좋아요', '⭐⭐⭐⭐⭐ 최고예요!'];
       document.querySelector('.rating-text').textContent = texts[rating];
       console.log('별점 선택됨:', rating);
-    };
+    }
 
     function handleImagePreview(e) {
       const file = e.target.files[0];
@@ -163,33 +134,35 @@
         
         let imageUrl = null;
 
-        // 이미지 업로드 (있는 경우)
+        // 이미지가 있으면 Base64로 변환해서 저장 아 좀 돼라
         if (imageFile) {
-          console.log('이미지 업로드 시작...');
-          const imageRef = ref(storage, `reviews/${Date.now()}_${imageFile.name}`);
-          await uploadBytes(imageRef, imageFile);
-          imageUrl = await getDownloadURL(imageRef);
-          console.log('이미지 업로드 완료:', imageUrl);
+          console.log('이미지 처리 시작...');
+          imageUrl = await fileToBase64(imageFile);
+          console.log('이미지 처리 완료');
         }
 
-        // 리뷰 데이터 저장
-        console.log('Firestore에 저장 시작...');
-        const docRef = await addDoc(collection(db, "reviews"), {
+        // 리뷰 데이터 생성
+        const reviewData = {
+          id: Date.now(), // 간단한 ID 생성
           name,
           content,
           rating,
           imageUrl,
-          createdAt: serverTimestamp()
-        });
+          createdAt: new Date().toISOString()
+        };
         
-        console.log('리뷰 저장 완료! 문서 ID:', docRef.id);
+        // 로컬스토리지에 저장
+        console.log('로컬스토리지에 저장 시작...');
+        saveReview(reviewData);
+        
+        console.log('리뷰 저장 완료!');
         alert("후기가 등록되었습니다! 감사합니다 💖");
         
         // 폼 초기화
         resetForm();
         
         // 리뷰 목록 새로고침
-        await loadReviews();
+        loadReviews();
 
       } catch (error) {
         console.error("리뷰 등록 실패:", error);
@@ -198,6 +171,31 @@
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
       }
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
+
+    function saveReview(reviewData) {
+      // 기존 리뷰들 가져오기
+      const existingReviews = getReviews();
+      
+      // 새 리뷰 추가
+      existingReviews.unshift(reviewData); // 맨 앞에 추가 (최신순)
+      
+      // 로컬스토리지에 저장
+      localStorage.setItem('nekorunail_reviews', JSON.stringify(existingReviews));
+    }
+
+    function getReviews() {
+      const stored = localStorage.getItem('nekorunail_reviews');
+      return stored ? JSON.parse(stored) : [];
     }
 
     function resetForm() {
@@ -215,7 +213,7 @@
       if (uploadArea) uploadArea.style.display = 'block';
     }
 
-    async function loadReviews() {
+    function loadReviews() {
       console.log('리뷰 로드 시작...');
       
       try {
@@ -225,14 +223,12 @@
           return;
         }
         
-        const q = query(collection(db, "reviews"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        
-        console.log('가져온 리뷰 수:', snapshot.size);
+        const reviews = getReviews();
+        console.log('가져온 리뷰 수:', reviews.length);
         
         reviewsContainer.innerHTML = '';
         
-        if (snapshot.empty) {
+        if (reviews.length === 0) {
           reviewsContainer.innerHTML = `
             <div class="no-reviews">
               <p>아직 등록된 후기가 없습니다.</p>
@@ -242,12 +238,11 @@
           return;
         }
         
-        snapshot.forEach(function(doc) {
-          const data = doc.data();
+        reviews.forEach(function(data) {
           const reviewBox = document.createElement("div");
           reviewBox.className = "review-box";
           
-          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const createdAt = new Date(data.createdAt);
           const dateString = createdAt.toLocaleDateString('ko-KR');
           
           const rating = data.rating || 5;
@@ -287,11 +282,12 @@
       }
     }
 
-    window.removeImage = function() {
+    // 이미지 제거 함수 시발
+    function removeImage() {
       document.getElementById("review-image").value = '';
       document.getElementById("image-preview").style.display = 'none';
       document.querySelector('.image-upload-area').style.display = 'block';
-    };
+    }
   </script>
 </head>
 <body>
