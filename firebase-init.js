@@ -57,3 +57,4 @@ window.loadReviews = async () => {
 window.addReview = data => addDoc(collection(db, "reviews"), data);
 
 console.log("✅ Firebase 초기화 완료: bookings/gallery/reviews 헬퍼 준비됨");
+console.log("🔥 Firebase App.options:", app.options);
