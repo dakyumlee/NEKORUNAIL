@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <script type="module" src="firebase-init.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>관리자 대시보드 - NEKORUNAIL</title>
@@ -130,6 +129,1150 @@
       <div id="reviews-list" class="reviews-grid"></div>
     </section>
   </main>
-  <script type="module" src="admin_fixed.js"></script>
+
+  <script type="module">
+    let isLoggedIn = false;
+    let firebaseLoaded = false;
+    let db, storage;
+    let dataCache = {
+      bookings: { data: null, timestamp: 0 },
+      gallery: { data: null, timestamp: 0 },
+      reviews: { data: null, timestamp: 0 }
+    };
+    const CACHE_DURATION = 2 * 60 * 1000;
+
+    async function loadFirebase() {
+      if (firebaseLoaded) return;
+
+      try {
+        console.log('🔥 Firebase 초기화 시작...');
+        
+        const [
+          { initializeApp },
+          { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp, where },
+          { getStorage, ref, uploadBytes, getDownloadURL, deleteObject }
+        ] = await Promise.all([
+          import("https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js"),
+          import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"),
+          import("https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js")
+        ]);
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
+          authDomain: "nekorunail.firebaseapp.com",
+          projectId: "nekorunail",
+          storageBucket: "nekorunail.appspot.com",
+          messagingSenderId: "571846382457",
+          appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
+          measurementId: "G-MW8CBHGSLG"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        storage = getStorage(app);
+
+        window.db = db;
+        window.storage = storage;
+        window.fbCollection = collection;
+        window.fbAddDoc = addDoc;
+        window.fbGetDocs = getDocs;
+        window.fbDeleteDoc = deleteDoc;
+        window.fbDoc = doc;
+        window.fbUpdateDoc = updateDoc;
+        window.fbQuery = query;
+        window.fbOrderBy = orderBy;
+        window.fbServerTimestamp = serverTimestamp;
+        window.fbWhere = where;
+        window.fbRef = ref;
+        window.fbUploadBytes = uploadBytes;
+        window.fbGetDownloadURL = getDownloadURL;
+        window.fbDeleteObject = deleteObject;
+
+        firebaseLoaded = true;
+        console.log('✅ Firebase 초기화 완료');
+      } catch (error) {
+        console.error('❌ Firebase 초기화 실패:', error);
+        showNotification('Firebase 연결 실패', 'error');
+        throw error;
+      }
+    }
+
+    function getCachedData(type) {
+      const cached = dataCache[type];
+      if (cached.data && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+        return cached.data;
+      }
+      return null;
+    }
+
+    function setCachedData(type, data) {
+      dataCache[type] = {
+        data: data,
+        timestamp: Date.now()
+      };
+    }
+
+    function clearCache(type = null) {
+      if (type) {
+        dataCache[type] = { data: null, timestamp: 0 };
+      } else {
+        Object.keys(dataCache).forEach(key => {
+          dataCache[key] = { data: null, timestamp: 0 };
+        });
+      }
+    }
+
+    window.showBookingDetails = function(docId, bookingData) {
+      const services = Array.isArray(bookingData.services) ? bookingData.services.join(', ') : (bookingData.services || '기본 케어');
+      const notes = bookingData.notes || '특이사항 없음';
+      const createdAt = bookingData.createdAt && bookingData.createdAt.toDate ? bookingData.createdAt.toDate() : new Date();
+      const createdDate = createdAt.toLocaleDateString('ko-KR');
+      const createdTime = createdAt.toLocaleTimeString('ko-KR');
+      
+      const modal = document.createElement('div');
+      modal.id = 'booking-detail-modal';
+      modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+      `;
+      
+      modal.innerHTML = `
+          <div style="
+              background: white;
+              border-radius: 18px;
+              padding: 2rem;
+              max-width: 600px;
+              width: 90%;
+              max-height: 80vh;
+              overflow-y: auto;
+              box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          ">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 1rem;">
+                  <h3 style="margin: 0; color: #333; font-size: 1.5rem;">📋 예약 상세정보</h3>
+                  <span onclick="closeBookingModal()" style="
+                      font-size: 1.5rem;
+                      cursor: pointer;
+                      color: #666;
+                      width: 30px;
+                      height: 30px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      border-radius: 50%;
+                      background: #f3f4f6;
+                      transition: all 0.3s ease;
+                  " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">&times;</span>
+              </div>
+              
+              <div style="display: grid; gap: 1.5rem;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                      <div style="background: #f8fafc; padding: 1rem; border-radius: 10px; border-left: 4px solid hotpink;">
+                          <strong style="color: #333; display: block; margin-bottom: 0.5rem;">👤 고객 정보</strong>
+                          <div style="color: #666;">이름: ${bookingData.name}</div>
+                          <div style="color: #666;">연락처: ${bookingData.phone}</div>
+                      </div>
+                      
+                      <div style="background: #f0fdf4; padding: 1rem; border-radius: 10px; border-left: 4px solid #22c55e;">
+                          <strong style="color: #333; display: block; margin-bottom: 0.5rem;">📅 예약 일정</strong>
+                          <div style="color: #666;">날짜: ${bookingData.date}</div>
+                          <div style="color: #666;">시간: ${bookingData.time}</div>
+                      </div>
+                  </div>
+                  
+                  <div style="background: #fef3c7; padding: 1rem; border-radius: 10px; border-left: 4px solid #f59e0b;">
+                      <strong style="color: #333; display: block; margin-bottom: 0.5rem;">💅 선택 서비스</strong>
+                      <div style="color: #666; line-height: 1.5;">${services}</div>
+                  </div>
+                  
+                  <div style="background: #e0f2fe; padding: 1rem; border-radius: 10px; border-left: 4px solid #0ea5e9;">
+                      <strong style="color: #333; display: block; margin-bottom: 0.5rem;">📝 고객 요청사항</strong>
+                      <div style="color: #666; line-height: 1.6; white-space: pre-wrap;">${notes}</div>
+                  </div>
+                  
+                  <div style="background: #f3f4f6; padding: 1rem; border-radius: 10px; border-left: 4px solid #6b7280;">
+                      <strong style="color: #333; display: block; margin-bottom: 0.5rem;">ℹ️ 접수 정보</strong>
+                      <div style="color: #666;">접수일: ${createdDate}</div>
+                      <div style="color: #666;">접수시간: ${createdTime}</div>
+                  </div>
+              </div>
+              
+              <div style="margin-top: 2rem; text-align: center;">
+                  <button onclick="closeBookingModal()" style="
+                      background: hotpink;
+                      color: white;
+                      border: none;
+                      padding: 0.8rem 2rem;
+                      border-radius: 50px;
+                      cursor: pointer;
+                      font-size: 1rem;
+                      font-weight: 600;
+                      transition: all 0.3s ease;
+                  " onmouseover="this.style.background='#ff69b4'" onmouseout="this.style.background='hotpink'">확인</button>
+              </div>
+          </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      modal.addEventListener('click', function(e) {
+          if (e.target === modal) {
+              closeBookingModal();
+          }
+      });
+    };
+
+    window.closeBookingModal = function() {
+      const modal = document.getElementById('booking-detail-modal');
+      if (modal) {
+          document.body.removeChild(modal);
+      }
+    };
+
+    // 대시보드 로드
+    async function loadDashboard() {
+      try {
+          const cachedBookings = getCachedData('bookings');
+          const cachedGallery = getCachedData('gallery');
+          const cachedReviews = getCachedData('reviews');
+
+          if (cachedBookings && cachedGallery && cachedReviews) {
+              updateDashboardStats(cachedBookings, cachedGallery, cachedReviews);
+              loadRecentBookings(cachedBookings);
+              showNotification('📊 캐시된 데이터로 업데이트됨!', 'success');
+              return;
+          }
+
+          await loadFirebase();
+          
+          const [bookingsSnapshot, gallerySnapshot, reviewsSnapshot] = await Promise.all([
+              window.fbGetDocs(window.fbCollection(db, "bookings")),
+              window.fbGetDocs(window.fbCollection(db, "gallery")),
+              window.fbGetDocs(window.fbCollection(db, "reviews"))
+          ]);
+          
+          const bookingsData = [];
+          const galleryData = [];
+          const reviewsData = [];
+          
+          bookingsSnapshot.forEach(doc => bookingsData.push({ id: doc.id, ...doc.data() }));
+          gallerySnapshot.forEach(doc => galleryData.push({ id: doc.id, ...doc.data() }));
+          reviewsSnapshot.forEach(doc => reviewsData.push({ id: doc.id, ...doc.data() }));
+          
+          setCachedData('bookings', bookingsData);
+          setCachedData('gallery', galleryData);
+          setCachedData('reviews', reviewsData);
+          
+          updateDashboardStats(bookingsData, galleryData, reviewsData);
+          loadRecentBookings(bookingsData);
+          
+          showNotification('📊 Firebase 데이터로 업데이트됨!', 'success');
+      } catch (error) {
+          console.error('대시보드 로드 실패:', error);
+          showNotification('대시보드 로드 실패', 'error');
+      }
+    }
+
+    function updateDashboardStats(bookingsData, galleryData, reviewsData) {
+      const today = new Date().toISOString().split('T')[0];
+      const todayBookingsCount = bookingsData.filter(booking => booking.date === today).length;
+      
+      const stats = {
+          'total-bookings': bookingsData.length,
+          'total-gallery': galleryData.length,
+          'total-reviews': reviewsData.length,
+          'today-bookings': todayBookingsCount
+      };
+      
+      Object.entries(stats).forEach(([id, value]) => {
+          const element = document.getElementById(id);
+          if (element) element.textContent = value;
+      });
+    }
+
+    function loadRecentBookings(bookingsData) {
+      const recentBookings = document.getElementById('recent-bookings');
+      if (!recentBookings) return;
+      
+      const sortedBookings = bookingsData
+          .sort((a, b) => {
+              const aTime = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+              const bTime = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+              return bTime - aTime;
+          })
+          .slice(0, 5);
+      
+      recentBookings.innerHTML = '';
+      
+      if (sortedBookings.length === 0) {
+          recentBookings.innerHTML = '<p style="text-align: center; color: #718096;">최근 예약이 없습니다.</p>';
+          return;
+      }
+      
+      sortedBookings.forEach(data => {
+          const item = document.createElement('div');
+          item.className = 'recent-item';
+          
+          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const timeString = createdAt.toLocaleDateString('ko-KR');
+          
+          item.innerHTML = `
+              <div class="recent-item-header">
+                  <span class="recent-item-name">${data.name}</span>
+                  <span class="recent-item-time">${timeString}</span>
+              </div>
+              <div class="recent-item-details">
+                  📅 ${data.date} ${data.time} | 📞 ${data.phone}
+              </div>
+          `;
+          recentBookings.appendChild(item);
+      });
+    }
+
+    async function loadGallery() {
+      const galleryList = document.getElementById('gallery-list');
+      if (!galleryList) return;
+      
+      try {
+          let galleryData = getCachedData('gallery');
+          
+          if (!galleryData) {
+              await loadFirebase();
+              const q = window.fbQuery(window.fbCollection(db, "gallery"), window.fbOrderBy("createdAt", "desc"));
+              const snapshot = await window.fbGetDocs(q);
+              
+              galleryData = [];
+              snapshot.forEach(doc => {
+                  galleryData.push({ id: doc.id, ...doc.data() });
+              });
+              
+              setCachedData('gallery', galleryData);
+          }
+          
+          displayGallery(galleryData);
+          
+      } catch (error) {
+          console.error('갤러리 로드 실패:', error);
+          galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
+      }
+    }
+
+    function displayGallery(galleryData) {
+      const galleryList = document.getElementById('gallery-list');
+      
+      galleryList.innerHTML = '';
+      
+      if (galleryData.length === 0) {
+          galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">갤러리가 비어있습니다.</div>';
+          return;
+      }
+      
+      galleryData.forEach(data => {
+          const card = document.createElement('div');
+          card.className = 'admin-gallery-card';
+          
+          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const dateString = createdAt.toLocaleDateString('ko-KR');
+          
+          card.innerHTML = `
+              <img src="${data.imageUrl}" alt="갤러리 이미지" loading="lazy" />
+              <div class="card-content">
+                  <div class="card-info">
+                      <h4>${data.caption || '무제'}</h4>
+                      <p>업로드: ${dateString}</p>
+                  </div>
+                  <div class="card-actions">
+                      <button class="delete-btn" onclick="deleteGalleryItem('${data.id}', '${data.imageUrl}')">삭제</button>
+                  </div>
+              </div>
+          `;
+          galleryList.appendChild(card);
+      });
+    }
+
+    function initializeAdmin() {
+      const loginOverlay = document.getElementById('login-overlay');
+      const adminPanel = document.getElementById('admin-panel');
+      const loginBtn = document.getElementById('login-btn');
+      const adminPass = document.getElementById('admin-pass');
+      const logoutBtn = document.getElementById('logout-btn');
+      
+      const savedLogin = sessionStorage.getItem('admin_logged_in');
+      if (savedLogin === 'true') {
+          isLoggedIn = true;
+          showAdminPanel(loginOverlay, adminPanel);
+          loadDashboard();
+      }
+
+      if (loginBtn) {
+          loginBtn.onclick = function(e) {
+              e.preventDefault();
+              handleLogin(adminPass, loginOverlay, adminPanel);
+          };
+      }
+      
+      if (adminPass) {
+          adminPass.addEventListener('keydown', function(e) {
+              if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleLogin(adminPass, loginOverlay, adminPanel);
+              }
+          });
+      }
+      
+      if (logoutBtn) {
+          logoutBtn.onclick = function(e) {
+              e.preventDefault();
+              handleLogout(loginOverlay, adminPanel, adminPass);
+          };
+      }
+      
+      // 네비게이션 설정
+      const navBtns = document.querySelectorAll('.nav-btn:not(.logout)');
+      navBtns.forEach(function(btn) {
+          btn.onclick = function() {
+              const tab = btn.dataset.tab;
+              switchTab(tab);
+          };
+      });
+
+      const uploadToggle = document.getElementById('upload-toggle');
+      const uploadSection = document.getElementById('upload-section');
+      const cancelUpload = document.getElementById('cancel-upload');
+      const uploadForm = document.getElementById('upload-form');
+      
+      if (uploadToggle && uploadSection) {
+          uploadToggle.onclick = function() {
+              const isHidden = uploadSection.style.display === 'none' || !uploadSection.style.display;
+              uploadSection.style.display = isHidden ? 'block' : 'none';
+          };
+      }
+      
+      if (cancelUpload && uploadSection) {
+          cancelUpload.onclick = function() {
+              uploadSection.style.display = 'none';
+              if (uploadForm) uploadForm.reset();
+          };
+      }
+      
+      if (uploadForm) {
+          uploadForm.addEventListener('submit', handleFileUpload);
+      }
+    }
+
+    function handleLogin(adminPass, loginOverlay, adminPanel) {
+      const password = adminPass.value.trim();
+      
+      if (!password) {
+          showNotification('비밀번호를 입력해주세요.', 'error');
+          adminPass.focus();
+          return;
+      }
+      
+      if (password === '0920') {
+          isLoggedIn = true;
+          sessionStorage.setItem('admin_logged_in', 'true');
+          
+          showNotification('✅ 로그인 성공!', 'success');
+          showAdminPanel(loginOverlay, adminPanel);
+          loadDashboard();
+      } else {
+          showNotification('❌ 비밀번호가 틀렸습니다.', 'error');
+          adminPass.value = '';
+          adminPass.focus();
+      }
+    }
+
+    function handleLogout(loginOverlay, adminPanel, adminPass) {
+      isLoggedIn = false;
+      sessionStorage.removeItem('admin_logged_in');
+      clearCache();
+      
+      showNotification('로그아웃되었습니다.', 'success');
+      showLoginScreen(loginOverlay, adminPanel);
+      
+      if (adminPass) {
+          adminPass.value = '';
+      }
+    }
+
+    function showLoginScreen(loginOverlay, adminPanel) {
+      if (loginOverlay) loginOverlay.style.display = 'flex';
+      if (adminPanel) adminPanel.style.display = 'none';
+    }
+
+    function showAdminPanel(loginOverlay, adminPanel) {
+      if (loginOverlay) loginOverlay.style.display = 'none';
+      if (adminPanel) adminPanel.style.display = 'block';
+    }
+
+    function switchTab(tabName) {
+      const navBtns = document.querySelectorAll('.nav-btn:not(.logout)');
+      navBtns.forEach(btn => btn.classList.remove('active'));
+      
+      const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+      
+      const tabContents = document.querySelectorAll('.tab-content');
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      const activeTab = document.getElementById(`${tabName}-tab`);
+      if (activeTab) activeTab.classList.add('active');
+      
+      switch (tabName) {
+          case 'dashboard':
+              loadDashboard();
+              break;
+          case 'gallery':
+              loadGallery();
+              break;
+      }
+    }
+
+    async function handleFileUpload(e) {
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('file-input');
+      const captionInput = document.getElementById('caption-input');
+      const file = fileInput.files[0];
+      const caption = captionInput.value.trim();
+      
+      if (!file) {
+          showNotification('파일을 선택해주세요.', 'error');
+          return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+          showNotification('이미지 파일만 업로드 가능합니다.', 'error');
+          return;
+      }
+      
+      try {
+          showNotification('업로드 중...', 'info');
+          
+          await loadFirebase();
+          
+          const imageRef = window.fbRef(storage, `gallery/${Date.now()}_${file.name}`);
+          await window.fbUploadBytes(imageRef, file);
+          const imageUrl = await window.fbGetDownloadURL(imageRef);
+          
+          await window.fbAddDoc(window.fbCollection(db, "gallery"), {
+              imageUrl,
+              caption: caption || '무제',
+              createdAt: window.fbServerTimestamp()
+          });
+          
+          showNotification('✅ 업로드 완료!', 'success');
+          
+          const uploadForm = document.getElementById('upload-form');
+          if (uploadForm) uploadForm.reset();
+          
+          const uploadSection = document.getElementById('upload-section');
+          if (uploadSection) uploadSection.style.display = 'none';
+          
+          clearCache('gallery');
+          loadGallery();
+          loadDashboard();
+          
+      } catch (error) {
+          console.error('업로드 실패:', error);
+          showNotification('업로드 실패', 'error');
+      }
+    }
+
+    window.deleteGalleryItem = async function(docId, imageUrl) {
+      if (!confirm('정말로 삭제하시겠습니까?')) return;
+      
+      try {
+          await loadFirebase();
+          await window.fbDeleteDoc(window.fbDoc(db, "gallery", docId));
+          
+          if (imageUrl) {
+              try {
+                  const imageRef = window.fbRef(storage, imageUrl);
+                  await window.fbDeleteObject(imageRef);
+              } catch (imageError) {
+                  console.warn('이미지 삭제 실패:', imageError);
+              }
+          }
+          
+          showNotification('삭제 완료!', 'success');
+          clearCache('gallery');
+          loadGallery();
+          loadDashboard();
+      } catch (error) {
+          console.error('삭제 실패:', error);
+          showNotification('삭제 실패', 'error');
+      }
+    };
+
+    function showNotification(message, type = 'success') {
+      const existing = document.querySelector('.notification');
+      if (existing) existing.remove();
+      
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.textContent = message;
+      
+      Object.assign(notification.style, {
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          padding: '1rem 1.5rem',
+          borderRadius: '10px',
+          color: 'white',
+          fontWeight: '600',
+          zIndex: '10001',
+          fontSize: '0.9rem',
+          maxWidth: '300px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          cursor: 'pointer'
+      });
+
+      if (type === 'success') {
+          notification.style.background = '#10b981';
+      } else if (type === 'error') {
+          notification.style.background = '#ef4444';
+      } else if (type === 'warning') {
+          notification.style.background = '#f59e0b';
+      } else {
+          notification.style.background = '#3b82f6';
+      }
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+          if (notification.parentNode) {
+              notification.remove();
+          }
+      }, 3000);
+      
+      notification.addEventListener('click', () => {
+          if (notification.parentNode) {
+              notification.remove();
+          }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeAdmin();
+    });
+
+    console.log('=== 수정된 Firebase 관리자 대시보드 로드 완료 ===');
+  </script>
+
+  <style>
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      color: white;
+      font-weight: 600;
+      z-index: 10001;
+      animation: slideInRight 0.3s ease;
+      max-width: 300px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .notification.success {
+      background: #10b981;
+    }
+    
+    .notification.error {
+      background: #ef4444;
+    }
+
+    .notification.warning {
+      background: #f59e0b;
+    }
+    
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    #login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    
+    .login-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 18px;
+      padding: 3rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      min-width: 400px;
+    }
+    
+    .login-card h2 {
+      color: #333;
+      margin-bottom: 2rem;
+      font-size: 1.8rem;
+    }
+    
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    #admin-pass {
+      padding: 1rem;
+      font-size: 1.1rem;
+      border: 2px solid #ddd;
+      border-radius: 15px;
+      transition: all 0.3s ease;
+    }
+    
+    #admin-pass:focus {
+      border-color: hotpink;
+      box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.1);
+      outline: none;
+    }
+    
+    #login-btn {
+      background: hotpink;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    
+    #login-btn:hover {
+      background: #ff69b4;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(255, 105, 180, 0.4);
+    }
+
+    .admin-header {
+      background: black;
+      color: hotpink;
+      padding: 2rem;
+      border-bottom: 3px dashed hotpink;
+    }
+    
+    .admin-header h1 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    
+    .admin-nav {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .nav-btn {
+      background: rgba(255, 105, 180, 0.1);
+      color: hotpink;
+      border: 1px solid rgba(255, 105, 180, 0.3);
+      padding: 0.75rem 1.5rem;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+    
+    .nav-btn:hover,
+    .nav-btn.active {
+      background: hotpink;
+      color: white;
+      transform: translateY(-2px);
+    }
+    
+    .nav-btn.logout {
+      background: rgba(220, 38, 38, 0.2);
+      border-color: rgba(220, 38, 38, 0.3);
+      color: #dc2626;
+    }
+    
+    .nav-btn.logout:hover {
+      background: #dc2626;
+      color: white;
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 0 2rem;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+    
+    .stats-card {
+      background: white;
+      border-radius: 18px;
+      padding: 2rem;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      transition: all 0.3s ease;
+      border-left: 4px solid hotpink;
+    }
+    
+    .stats-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    .stats-icon {
+      font-size: 3rem;
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, hotpink, #ff69b4);
+      border-radius: 50%;
+      color: white;
+    }
+    
+    .stats-info h3 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+    
+    .stats-info p {
+      color: #666;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .recent-section {
+      background: white;
+      border-radius: 18px;
+      padding: 2rem;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .recent-section h2 {
+      color: #333;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+    }
+    
+    .recent-list {
+      display: grid;
+      gap: 1rem;
+    }
+    
+    .recent-item {
+      padding: 1rem;
+      border-radius: 10px;
+      background: rgba(255, 105, 180, 0.05);
+      border-left: 3px solid hotpink;
+      transition: all 0.3s ease;
+    }
+    
+    .recent-item:hover {
+      background: rgba(255, 105, 180, 0.1);
+      transform: translateX(5px);
+    }
+    
+    .recent-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    
+    .recent-item-name {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .recent-item-time {
+      color: #718096;
+      font-size: 0.9rem;
+    }
+    
+    .recent-item-details {
+      color: #4a5568;
+      font-size: 0.9rem;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    .section-header h2 {
+      font-size: 1.8rem;
+      color: #333;
+      margin: 0;
+    }
+    
+    .primary-btn {
+      background: hotpink;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 50px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .primary-btn:hover {
+      background: #ff69b4;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(255, 105, 180, 0.4);
+    }
+    
+    .secondary-btn {
+      background: #f7fafc;
+      color: #4a5568;
+      border: 2px solid #e2e8f0;
+      padding: 0.75rem 1.5rem;
+      border-radius: 50px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .secondary-btn:hover {
+      background: #edf2f7;
+      border-color: #cbd5e0;
+    }
+
+    .upload-form {
+      background: white;
+      border-radius: 18px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .upload-area {
+      position: relative;
+      border: 3px dashed #cbd5e0;
+      border-radius: 15px;
+      padding: 3rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .upload-area:hover {
+      border-color: hotpink;
+      background: rgba(255, 105, 180, 0.05);
+    }
+    
+    .upload-area input[type="file"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+    
+    .upload-placeholder {
+      pointer-events: none;
+    }
+    
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: #a0aec0;
+    }
+    
+    .upload-placeholder p {
+      color: #718096;
+      font-size: 1.1rem;
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+    
+    .admin-gallery-card {
+      background: white;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+    
+    .admin-gallery-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    .admin-gallery-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+    
+    .card-content {
+      padding: 1.5rem;
+    }
+    
+    .card-info {
+      margin-bottom: 1rem;
+    }
+    
+    .card-info h4 {
+      font-size: 1.1rem;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+    
+    .card-info p {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    
+    .card-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .delete-btn {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .delete-btn:hover {
+      background: #b91c1c;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(220, 38, 38, 0.4);
+    }
+
+    #caption-input {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #e1e5e9;
+      border-radius: 15px;
+      font-size: 1rem;
+      font-family: 'MaruBuri', sans-serif;
+      transition: all 0.3s ease;
+      background: #fafbfc;
+      box-sizing: border-box;
+      margin-bottom: 1.5rem;
+    }
+    
+    #caption-input:focus {
+      outline: none;
+      border-color: hotpink;
+      background: white;
+      box-shadow: 0 0 0 4px rgba(255, 105, 180, 0.1);
+    }
+
+    @media (max-width: 768px) {
+      .login-card {
+        min-width: 300px;
+        margin: 1rem;
+        padding: 2rem;
+      }
+      
+      .admin-header {
+        padding: 1.5rem;
+      }
+      
+      .admin-header h1 {
+        font-size: 1.5rem;
+      }
+      
+      .tab-content {
+        padding: 0 1rem;
+      }
+      
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .stats-card {
+        padding: 1.5rem;
+      }
+      
+      .gallery-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .upload-area {
+        padding: 2rem 1rem;
+      }
+      
+      .form-actions {
+        flex-direction: column;
+      }
+      
+      .card-actions {
+        justify-content: center;
+      }
+
+      .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
 </body>
 </html>
