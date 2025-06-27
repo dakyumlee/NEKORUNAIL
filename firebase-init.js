@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import {
   getFirestore,
   collection,
@@ -16,7 +16,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
   authDomain: "nekorunail.firebaseapp.com",
   projectId: "nekorunail",
-  storageBucket: "nekorunail.firebasestorage.app",
+  storageBucket: "nekorunail.appspot.com",
   messagingSenderId: "571846382457",
   appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
   measurementId: "G-MW8CBHGSLG"
