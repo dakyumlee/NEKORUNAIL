@@ -2,10 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebas
 import {
   getFirestore,
   collection,
-  query,
-  where,
-  getDocs,
-  addDoc
+  addDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 import {
   getStorage,
@@ -24,37 +22,22 @@ const firebaseConfig = {
   measurementId: "G-MW8CBHGSLG"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app     = initializeApp(firebaseConfig);
+const db      = getFirestore(app);
 const storage = getStorage(app);
 
-window.loadBookings = async (date = null) => {
-  const q = date
-    ? query(collection(db, "bookings"), where("date", "==", date))
-    : query(collection(db, "bookings"));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-};
+window.uploadGalleryImage = async (file) => {
 
-window.addBooking = data => addDoc(collection(db, "bookings"), data);
-
-window.loadGalleryImages = async () => {
-  const snap = await getDocs(query(collection(db, "gallery")));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-};
-
-window.uploadGalleryImage = async file => {
   const imgRef = ref(storage, `gallery/${Date.now()}_${file.name}`);
   await uploadBytes(imgRef, file);
-  return getDownloadURL(imgRef);
-};
+  const url = await getDownloadURL(imgRef);
 
-window.loadReviews = async () => {
-  const snap = await getDocs(query(collection(db, "reviews")));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-};
+  await addDoc(collection(db, "gallery"), {
+    imageUrl:  url,
+    createdAt: serverTimestamp()
+  });
 
-window.addReview = data => addDoc(collection(db, "reviews"), data);
+  return url;
+};
 
 console.log("✅ Firebase 초기화 완료: bookings/gallery/reviews 헬퍼 준비됨");
-console.log("🔥 Firebase App.options:", app.options);

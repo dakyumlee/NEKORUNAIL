@@ -1,9 +1,16 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import {
-  getFirestore, collection, getDocs
+  getFirestore,
+  collection,
+  getDocs,
+  addDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 import {
-  getStorage, ref, uploadBytes, getDownloadURL
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js";
 
 const cfg = {
@@ -25,7 +32,12 @@ window.loadGalleryImages = async () => {
 window.uploadGalleryImage = async file => {
   const imgRef = ref(storage, `gallery/${Date.now()}_${file.name}`);
   await uploadBytes(imgRef, file);
-  return getDownloadURL(imgRef);
+  const url = await getDownloadURL(imgRef);
+  await addDoc(collection(db,"gallery"), {
+    imageUrl:  url,
+    createdAt: serverTimestamp()
+  });
+  return url;
 };
 
 console.log("✅ gallery helper ready");
