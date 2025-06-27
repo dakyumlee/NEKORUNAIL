@@ -4,8 +4,6 @@
   <meta charset="UTF-8"/>
   <title>갤러리 - NEKORUNAIL</title>
   <link rel="stylesheet" href="style.css"/>
-  <script type="module" src="firebase-init.js"></script>
-  <script type="module" src="gallery.js"></script>
   <style>
     .gallery-container {
       max-width: 1200px;
@@ -240,7 +238,13 @@
     <p>NEKORUNAIL ⎜ Instagram @NEKORUnail ⎜ 2025</p>
   </footer>
 
-  
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="firebase-init.js"></script>
+<script src="gallary.js"></script>
 
   <script>
     let isLoading = false;
