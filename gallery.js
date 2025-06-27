@@ -41,3 +41,21 @@ window.uploadGalleryImage = async file => {
 };
 
 console.log("✅ gallery helper ready");
+
+window.loadGallery = async () => {
+  const images = await window.loadGalleryImages();
+  const container = document.getElementById("gallery-container");
+  container.innerHTML = "";
+  if (!images.length) {
+    container.innerHTML = `<div class="no-gallery">갤러리가 비어있습니다.</div>`;
+    return;
+  }
+  images.forEach(img => {
+    const el = document.createElement("div");
+    el.className = "gallery-item";
+    el.innerHTML = `<img src="${img.imageUrl}" alt="" />`;
+    container.appendChild(el);
+  });
+};
+
+document.addEventListener("DOMContentLoaded", window.loadGallery);
