@@ -148,272 +148,236 @@
   </footer>
   <script src="supabase.js"></script>
   <script>
-    const SUPABASE_URL = 'https://erxxsytwhapgmoyepber.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyeHhzeXR3aGFwZ21veWVwYmVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNzA3MDEsImV4cCI6MjA2Njk0NjcwMX0.qNQx04OHqt-kpqUE4yK9Kb1A1YWZRbGHIQ7rsW574_Q'
-    
-    let supabase = null;
-    
-    async function initSupabase() {
-      if (supabase) return supabase;
+    let selectedRating = 0;
+    let currentPage = 0;
+    const REVIEWS_PER_PAGE = 5;
+    let allReviews = [];
+    let isLoading = false;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log('페이지 로드 완료');
+      initializeStarRating();
+      setupImagePreview();
+      initializeReviewFlow();
+    });
+
+    function initializeStarRating() {
+      console.log('별점 시스템 초기화');
+      const starRating = document.getElementById('star-rating');
+      const ratingInput = document.getElementById('rating');
+      const ratingText = document.querySelector('.rating-text');
       
+      if (!starRating || !ratingInput || !ratingText) {
+        console.error('별점 요소를 찾을 수 없음');
+        return;
+      }
+      
+      starRating.innerHTML = [1,2,3,4,5].map(n => `<span class="star" data-rating="${n}">⭐</span>`).join('');
+      const stars = starRating.querySelectorAll('.star');
+      
+      console.log('별점 개수:', stars.length);
+      
+      stars.forEach(star => {
+        const r = +star.dataset.rating;
+        star.addEventListener('click', () => {
+          console.log('별점 클릭:', r);
+          selectedRating = r;
+          ratingInput.value = r;
+          updateStars(stars, r);
+          updateRatingText(ratingText, r);
+        });
+        star.addEventListener('mouseenter', () => highlightStars(stars, r));
+      });
+      starRating.addEventListener('mouseleave', () => updateStars(stars, selectedRating));
+    }
+
+    function highlightStars(stars, rating) {
+      stars.forEach((s,i) => {
+        s.style.opacity = i < rating ? '0.8' : '0.3';
+        s.style.transform = i < rating ? 'scale(1.15)' : 'scale(1)';
+      });
+    }
+
+    function updateStars(stars, rating) {
+      stars.forEach((s,i) => {
+        if(i < rating) { s.classList.add('active'); s.style.opacity='1'; s.style.transform='scale(1.1)'; }
+        else { s.classList.remove('active'); s.style.opacity='0.3'; s.style.transform='scale(1)'; }
+      });
+    }
+
+    function updateRatingText(el, rating) {
+      const texts = ['별을 클릭하여 평점을 매겨주세요','별로예요','그저 그래요','보통이에요','좋아요','최고예요!'];
+      el.textContent = texts[rating]||texts[0];
+    }
+
+    function setupImagePreview() {
+      const imgInput = document.getElementById("review-image");
+      const preview = document.getElementById("image-preview");
+      const img = document.getElementById("preview-img");
+      const removeBtn = document.getElementById("remove-image");
+      imgInput.addEventListener("change", e => {
+        const f = e.target.files[0];
+        if(!f|| !f.type.startsWith("image/")) return alert("이미지 파일만 가능합니다");
+        if(f.size>5*1024*1024) return alert("5MB 이하만 가능");
+        const fr=new FileReader();
+        fr.onload=e=>{ img.src=e.target.result; preview.style.display='block'; }
+        fr.readAsDataURL(f);
+      });
+      removeBtn.addEventListener("click",()=>{
+        imgInput.value=''; preview.style.display='none';
+      });
+    }
+
+    function initializeReviewFlow() {
+      document.getElementById("review-sort").addEventListener("change", () => loadReviews(true));
+      document.getElementById("load-more-btn").addEventListener("click", () => loadReviews(false));
+      document.getElementById("review-form").addEventListener("submit", async e => { e.preventDefault(); await submitReview(); });
+    
+      const testBtn = document.createElement('button');
+      testBtn.textContent = '테스트 리뷰 추가';
+      testBtn.style.cssText = 'margin: 10px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px;';
+      testBtn.onclick = async () => {
+        try {
+          await window.addReview({
+            name: '테스트 사용자',
+            content: '테스트 리뷰입니다. 매우 만족합니다!',
+            rating: 5,
+            image_url: null
+          });
+          console.log('테스트 리뷰 추가 완료');
+          loadReviews(true);
+        } catch (error) {
+          console.error('테스트 리뷰 추가 실패:', error);
+        }
+      };
+      document.querySelector('.reviews-controls').appendChild(testBtn);
+      
+      loadReviews(true);
+    }
+
+    async function submitReview() {
+      const name = document.getElementById("reviewer").value.trim();
+      const content = document.getElementById("review-content").value.trim();
+      if(!name||!content||selectedRating<1) return window.showNotification("모든 항목을 채워주세요", "error");
+      const btn = document.getElementById("submit-btn");
+      const txt = btn.querySelector('.btn-text');
+      const spin = btn.querySelector('.loading-spinner');
+      txt.style.display='none'; spin.style.display='inline-block'; btn.disabled=true;
       try {
-        const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js@2');
-        supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('✅ Supabase 초기화 완료');
-        return supabase;
-      } catch (error) {
-        console.error('❌ Supabase 초기화 실패:', error);
-        throw error;
+        let imageUrl = null;
+        const file = document.getElementById("review-image").files[0];
+        if(file){
+          const reader = new FileReader();
+          imageUrl = await new Promise((resolve) => {
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+          });
+        }
+        await window.addReview({ 
+          name, 
+          content, 
+          rating: selectedRating, 
+          image_url: imageUrl 
+        });
+        window.showNotification("후기 등록 완료!", "success");
+        document.getElementById("review-form").reset();
+        document.getElementById("image-preview").style.display = 'none';
+        selectedRating=0; 
+        updateStars(document.querySelectorAll('.star'),0); 
+        updateRatingText(document.querySelector('.rating-text'),0);
+        loadReviews(true);
+      } catch(err){ 
+        console.error(err); 
+        window.showNotification("등록 실패", "error"); 
+      } finally{ 
+        txt.style.display='inline'; 
+        spin.style.display='none'; 
+        btn.disabled=false; 
       }
     }
-    
-    window.loadBookings = async (date = null) => {
-      try {
-        const client = await initSupabase();
-        let query = client.from('bookings').select('*').order('created_at', { ascending: false });
-        
-        if (date) {
-          query = query.eq('date', date);
-        }
-        
-        const { data, error } = await query;
-        
-        if (error) {
-          console.error('Booking load error:', error);
-          return [];
-        }
-        return data || [];
-      } catch (error) {
-        console.error('예약 로드 실패:', error);
-        return [];
+
+    async function loadReviews(reset) {
+      if(isLoading) return; 
+      isLoading=true;
+      const cont = document.getElementById("reviews-container");
+      const btn = document.getElementById("load-more-btn");
+      
+      if(reset) { 
+        cont.innerHTML='<div class="loading-reviews"><p>로딩 중…</p></div>'; 
+        currentPage = 0; 
+        allReviews = [];
       }
-    };
-    
-    window.addBooking = async (bookingData) => {
+      
       try {
-        const client = await initSupabase();
-        const { data, error } = await client
-          .from('bookings')
-          .insert([{
-            ...bookingData,
-            created_at: new Date().toISOString()
-          }])
-          .select();
+        console.log('리뷰 로딩 시작...');
+        const sort = document.getElementById("review-sort").value;
+        const reviews = await window.loadReviews(sort);
+        console.log('로드된 리뷰:', reviews);
         
-        if (error) {
-          console.error('Booking add error:', error);
-          throw error;
-        }
-        return data[0];
-      } catch (error) {
-        console.error('예약 추가 실패:', error);
-        throw error;
-      }
-    };
-    
-    window.loadGalleryImages = async () => {
-      try {
-        const client = await initSupabase();
-        const { data, error } = await client
-          .from('gallery')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error('Gallery load error:', error);
-          return [];
-        }
-        return data || [];
-      } catch (error) {
-        console.error('갤러리 로드 실패:', error);
-        return [];
-      }
-    };
-    
-    window.addGalleryImage = async (imageData) => {
-      try {
-        const client = await initSupabase();
-        const { data, error } = await client
-          .from('gallery')
-          .insert([{
-            ...imageData,
-            created_at: new Date().toISOString()
-          }])
-          .select();
-        
-        if (error) {
-          console.error('Gallery add error:', error);
-          throw error;
-        }
-        return data[0];
-      } catch (error) {
-        console.error('갤러리 추가 실패:', error);
-        throw error;
-      }
-    };
-    
-    window.loadReviews = async (sortBy = 'newest', limit = null) => {
-      try {
-        const client = await initSupabase();
-        let query = client.from('reviews').select('*');
-        
-        switch (sortBy) {
-          case 'oldest':
-            query = query.order('created_at', { ascending: true });
-            break;
-          case 'highest':
-            query = query.order('rating', { ascending: false });
-            break;
-          case 'lowest':
-            query = query.order('rating', { ascending: true });
-            break;
-          default:
-            query = query.order('created_at', { ascending: false });
+        if(reset) {
+          cont.innerHTML='';
+          allReviews = Array.isArray(reviews) ? reviews : [];
         }
         
-        if (limit && limit > 0) {
-          query = query.limit(limit);
+        if(allReviews.length === 0 && reset){
+          cont.innerHTML='<div class="no-reviews"><p>등록된 후기가 없습니다.</p><p>첫 후기를 남겨보세요!</p></div>';
+          btn.style.display='none'; 
+          isLoading=false; 
+          return;
         }
         
-        console.log('리뷰 쿼리 실행 중...');
-        const { data, error } = await query;
+        const startIndex = currentPage * REVIEWS_PER_PAGE;
+        const endIndex = startIndex + REVIEWS_PER_PAGE;
+        const reviewsToShow = allReviews.slice(startIndex, endIndex);
+        console.log('표시할 리뷰:', reviewsToShow);
         
-        if (error) {
-          console.error('Reviews load error details:', error);
-          return [];
-        }
+        reviewsToShow.forEach(d => {
+          if (!d || !d.id) {
+            console.log('잘못된 리뷰 데이터:', d);
+            return;
+          }
+          
+          const date = d.created_at ? new Date(d.created_at).toLocaleDateString('ko-KR') : '';
+          const rating = Math.max(1, Math.min(5, parseInt(d.rating) || 5));
+          const stars = '⭐'.repeat(rating) + '☆'.repeat(5-rating);
+          const imgHtml = d.image_url ? `<div class="review-image-container"><img src="${d.image_url}" class="review-image" onclick="openImageModal('${d.image_url}','${(d.name || '익명')}님의 후기')" /></div>` : '';
+          
+          const box = document.createElement('div'); 
+          box.className = 'review-box';
+          box.innerHTML = `
+            <div class="review-header">
+              <strong class="review-author">${d.name || '익명'}</strong>
+              <span class="review-date">${date}</span>
+            </div>
+            <div class="review-rating">${stars}</div>
+            <div class="review-content">${d.content || ''}</div>
+            ${imgHtml}
+          `;
+          cont.appendChild(box);
+        });
         
-        console.log('로드된 리뷰 데이터:', data);
-        return data || [];
-      } catch (error) {
+        currentPage++;
+        btn.style.display = endIndex < allReviews.length ? 'block' : 'none';
+        console.log('리뷰 로딩 완료');
+      } catch(error) {
         console.error('리뷰 로드 실패:', error);
-        return [];
-      }
-    };
-    
-    window.addReview = async (reviewData) => {
-      try {
-        const client = await initSupabase();
-        
-        // 데이터 검증 및 정리
-        const cleanData = {
-          name: String(reviewData.name || '익명'),
-          content: String(reviewData.content || ''),
-          rating: parseInt(reviewData.rating) || 5,
-          image_url: reviewData.image_url || null,
-          created_at: new Date().toISOString()
-        };
-        
-        console.log('추가할 리뷰 데이터:', cleanData);
-        
-        const { data, error } = await client
-          .from('reviews')
-          .insert([cleanData])
-          .select();
-        
-        if (error) {
-          console.error('Review add error details:', error);
-          throw new Error(`리뷰 추가 실패: ${error.message}`);
+        if(reset) {
+          cont.innerHTML='<div class="error-message"><p>리뷰 로드에 실패했습니다.</p><p>오류: ' + error.message + '</p></div>';
         }
-        
-        console.log('리뷰 추가 성공:', data);
-        return data[0];
-      } catch (error) {
-        console.error('리뷰 추가 실패:', error);
-        throw error;
       }
+      isLoading = false;
+    }
+
+    window.openImageModal = (url,cap) => {
+      const m=document.createElement('div'); m.className='image-modal';
+      m.innerHTML=`<div class="modal-content"><span class="close-modal">&times;</span><img src="${url}" /><div class="modal-caption">${cap}</div></div>`;
+      document.body.appendChild(m);
+      m.querySelector('.close-modal').onclick=()=>m.remove();
+      m.onclick=e=>{ if(e.target===m) m.remove(); };
+      document.addEventListener('keydown',e=>{ if(e.key==='Escape') m.remove(); });
     };
-    
-    window.deleteRecord = async (table, id) => {
-      try {
-        const client = await initSupabase();
-        const { error } = await client
-          .from(table)
-          .delete()
-          .eq('id', id);
-        
-        if (error) {
-          console.error('Delete error:', error);
-          throw error;
-        }
-        return true;
-      } catch (error) {
-        console.error('삭제 실패:', error);
-        throw error;
-      }
-    };
-    
-    window.updateBookingStatus = async (id, status) => {
-      try {
-        const client = await initSupabase();
-        const { data, error } = await client
-          .from('bookings')
-          .update({ status })
-          .eq('id', id)
-          .select();
-        
-        if (error) {
-          console.error('Status update error:', error);
-          throw error;
-        }
-        return data[0];
-      } catch (error) {
-        console.error('상태 업데이트 실패:', error);
-        throw error;
-      }
-    };
-    
-    window.showNotification = function(message, type = 'success') {
-      const existing = document.querySelector('.notification');
-      if (existing) existing.remove();
-      
-      const notification = document.createElement('div');
-      notification.className = `notification ${type}`;
-      notification.textContent = message;
-      
-      Object.assign(notification.style, {
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        padding: '1rem 1.5rem',
-        borderRadius: '10px',
-        color: 'white',
-        fontWeight: '600',
-        zIndex: '10001',
-        fontSize: '0.9rem',
-        maxWidth: '300px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        cursor: 'pointer'
-      });
-    
-      if (type === 'success') {
-        notification.style.background = '#10b981';
-      } else if (type === 'error') {
-        notification.style.background = '#ef4444';
-      } else if (type === 'warning') {
-        notification.style.background = '#f59e0b';
-      } else {
-        notification.style.background = '#3b82f6';
-      }
-      
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove();
-        }
-      }, 3000);
-      
-      notification.addEventListener('click', () => {
-        if (notification.parentNode) {
-          notification.remove();
-        }
-      });
-    };
-    
-    initSupabase().catch(console.error);
-    
-    console.log('✅ Supabase 클라이언트 로드 완료');
+
+    console.log('리뷰 페이지 Supabase 연동 완료');
   </script>
 </body>
 </html>
