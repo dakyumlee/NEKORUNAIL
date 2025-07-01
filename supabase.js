@@ -1,26 +1,20 @@
-const SUPABASE_URL = 'https://erxxsytwhapgmoyepber.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyeHhzeXR3aGFwZ21veWVwYmVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNzA3MDEsImV4cCI6MjA2Njk0NjcwMX0.qNQx04OHqt-kpqUE4yK9Kb1A1YWZRbGHIQ7rsW574_Q'
+import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
 
-let supabase = null;
+const supabaseUrl = 'https://kknhrvbgspfvohwqetuj.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtrbmhydmJnc3Bmdm9od3FldHVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4MDUzMjQsImV4cCI6MjA1MTM4MTMyNH0.PZQqMUksaJSffzrm9jt1zzFWE5JCgSdJpb7n8WGMhw8';
 
-async function initSupabase() {
-  if (supabase) return supabase;
-  
-  try {
-    const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js@2');
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('✅ Supabase 초기화 완료');
-    return supabase;
-  } catch (error) {
-    console.error('❌ Supabase 초기화 실패:', error);
-    throw error;
-  }
-}
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+console.log('✅ Supabase 클라이언트 초기화 완료');
 
 window.loadBookings = async (date = null) => {
   try {
-    const client = await initSupabase();
-    let query = client.from('bookings').select('*').order('created_at', { ascending: false });
+    console.log('📅 예약 데이터 로드 중...', date ? `(날짜: ${date})` : '(전체)');
+    
+    let query = supabase
+      .from('bookings')
+      .select('*')
+      .order('created_at', { ascending: false });
     
     if (date) {
       query = query.eq('date', date);
@@ -29,83 +23,117 @@ window.loadBookings = async (date = null) => {
     const { data, error } = await query;
     
     if (error) {
-      console.error('Booking load error:', error);
-      return [];
+      console.error('예약 로드 에러:', error);
+      throw error;
     }
+    
+    console.log('📅 예약 데이터 로드 완료:', data?.length || 0, '개');
     return data || [];
+    
   } catch (error) {
     console.error('예약 로드 실패:', error);
-    return [];
+    throw error;
   }
 };
 
 window.addBooking = async (bookingData) => {
   try {
-    const client = await initSupabase();
-    const { data, error } = await client
+    console.log('📝 예약 추가 중...', bookingData);
+    
+    const { data, error } = await supabase
       .from('bookings')
-      .insert([{
-        ...bookingData,
-        created_at: new Date().toISOString()
-      }])
+      .insert([bookingData])
       .select();
     
     if (error) {
-      console.error('Booking add error:', error);
+      console.error('예약 추가 에러:', error);
       throw error;
     }
+    
+    console.log('✅ 예약 추가 완료:', data);
     return data[0];
+    
   } catch (error) {
     console.error('예약 추가 실패:', error);
     throw error;
   }
 };
 
+window.updateBookingStatus = async (id, status) => {
+  try {
+    console.log('🔄 예약 상태 업데이트:', id, '→', status);
+    
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ status })
+      .eq('id', id)
+      .select();
+    
+    if (error) {
+      console.error('예약 상태 업데이트 에러:', error);
+      throw error;
+    }
+    
+    console.log('✅ 예약 상태 업데이트 완료:', data);
+    return data[0];
+    
+  } catch (error) {
+    console.error('예약 상태 업데이트 실패:', error);
+    throw error;
+  }
+};
+
 window.loadGalleryImages = async () => {
   try {
-    const client = await initSupabase();
-    const { data, error } = await client
+    console.log('🖼️ 갤러리 데이터 로드 중...');
+    
+    const { data, error } = await supabase
       .from('gallery')
       .select('*')
       .order('created_at', { ascending: false });
     
     if (error) {
-      console.error('Gallery load error:', error);
-      return [];
+      console.error('갤러리 로드 에러:', error);
+      throw error;
     }
+    
+    console.log('🖼️ 갤러리 데이터 로드 완료:', data?.length || 0, '개');
     return data || [];
+    
   } catch (error) {
     console.error('갤러리 로드 실패:', error);
-    return [];
+    throw error;
   }
 };
 
 window.addGalleryImage = async (imageData) => {
   try {
-    const client = await initSupabase();
-    const { data, error } = await client
+    console.log('📸 갤러리 이미지 추가 중...', imageData);
+    
+    const { data, error } = await supabase
       .from('gallery')
-      .insert([{
-        ...imageData,
-        created_at: new Date().toISOString()
-      }])
+      .insert([imageData])
       .select();
     
     if (error) {
-      console.error('Gallery add error:', error);
+      console.error('갤러리 이미지 추가 에러:', error);
       throw error;
     }
+    
+    console.log('✅ 갤러리 이미지 추가 완료:', data);
     return data[0];
+    
   } catch (error) {
-    console.error('갤러리 추가 실패:', error);
+    console.error('갤러리 이미지 추가 실패:', error);
     throw error;
   }
 };
 
 window.loadReviews = async (sortBy = 'newest', limit = null) => {
   try {
-    const client = await initSupabase();
-    let query = client.from('reviews').select('*');
+    console.log('💬 리뷰 데이터 로드 중...', { sortBy, limit });
+    
+    let query = supabase.from('reviews').select('*');
     
     switch (sortBy) {
       case 'oldest':
@@ -117,56 +145,50 @@ window.loadReviews = async (sortBy = 'newest', limit = null) => {
       case 'lowest':
         query = query.order('rating', { ascending: true });
         break;
+      case 'newest':
       default:
         query = query.order('created_at', { ascending: false });
+        break;
     }
-    
+ 
     if (limit && limit > 0) {
       query = query.limit(limit);
     }
     
-    console.log('리뷰 쿼리 실행 중...');
     const { data, error } = await query;
     
     if (error) {
-      console.error('Reviews load error details:', error);
-      return [];
+      console.error('리뷰 로드 에러:', error);
+      throw error;
     }
     
-    console.log('로드된 리뷰 데이터:', data);
+    console.log('💬 리뷰 데이터 로드 완료:', data?.length || 0, '개');
+    console.log('리뷰 데이터 샘플:', data?.[0]);
     return data || [];
+    
   } catch (error) {
     console.error('리뷰 로드 실패:', error);
-    return [];
+    throw error;
   }
 };
 
 window.addReview = async (reviewData) => {
   try {
-    const client = await initSupabase();
+    console.log('📝 리뷰 추가 중...', reviewData);
     
-    const cleanData = {
-      name: String(reviewData.name || '익명'),
-      content: String(reviewData.content || ''),
-      rating: parseInt(reviewData.rating) || 5,
-      image_url: reviewData.image_url || '',
-      created_at: new Date().toISOString()
-    };
-    
-    console.log('추가할 리뷰 데이터:', cleanData);
-    
-    const { data, error } = await client
+    const { data, error } = await supabase
       .from('reviews')
-      .insert([cleanData])
+      .insert([reviewData])
       .select();
     
     if (error) {
-      console.error('Review add error details:', error);
-      throw new Error(`리뷰 추가 실패: ${error.message}`);
+      console.error('리뷰 추가 에러:', error);
+      throw error;
     }
     
-    console.log('리뷰 추가 성공:', data);
+    console.log('✅ 리뷰 추가 완료:', data);
     return data[0];
+    
   } catch (error) {
     console.error('리뷰 추가 실패:', error);
     throw error;
@@ -175,39 +197,24 @@ window.addReview = async (reviewData) => {
 
 window.deleteRecord = async (table, id) => {
   try {
-    const client = await initSupabase();
-    const { error } = await client
+    console.log('🗑️ 데이터 삭제 중...', { table, id });
+    
+    const { data, error } = await supabase
       .from(table)
       .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error('Delete error:', error);
-      throw error;
-    }
-    return true;
-  } catch (error) {
-    console.error('삭제 실패:', error);
-    throw error;
-  }
-};
-
-window.updateBookingStatus = async (id, status) => {
-  try {
-    const client = await initSupabase();
-    const { data, error } = await client
-      .from('bookings')
-      .update({ status })
       .eq('id', id)
       .select();
     
     if (error) {
-      console.error('Status update error:', error);
+      console.error('데이터 삭제 에러:', error);
       throw error;
     }
-    return data[0];
+    
+    console.log('✅ 데이터 삭제 완료:', data);
+    return data;
+    
   } catch (error) {
-    console.error('상태 업데이트 실패:', error);
+    console.error('데이터 삭제 실패:', error);
     throw error;
   }
 };
@@ -260,6 +267,27 @@ window.showNotification = function(message, type = 'success') {
   });
 };
 
-initSupabase().catch(console.error);
+async function testConnection() {
+  try {
+    console.log('🧪 Supabase 연결 테스트 중...');
+    
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('count', { count: 'exact', head: true });
+    
+    if (error) throw error;
+    
+    console.log('✅ Supabase 연결 테스트 성공!');
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Supabase 연결 테스트 실패:', error);
+    return false;
+  }
+}
 
-console.log('✅ Supabase 클라이언트 로드 완료');
+document.addEventListener('DOMContentLoaded', () => {
+  testConnection();
+});
+
+console.log('🚀 Supabase 연동 시스템 로드 완료!');
