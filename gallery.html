@@ -238,8 +238,7 @@
     <p>NEKORUNAIL ⎜ Instagram @NEKORUnail ⎜ 2025</p>
   </footer>
 
-  <script src="firebase.js"></script>
-<script src="gallary.js"></script>
+  <script src="supabase.js"></script>
 
   <script>
     let isLoading = false;
@@ -276,7 +275,6 @@
       await window.uploadGalleryImage(input.files[0]);
       loadGallery();
     }
-    // 만약 업로드 버튼이 별도로 있다면:
     const upBtn = document.getElementById("uploadBtn");
     if (upBtn) upBtn.addEventListener("click", handleUpload);
   </script>

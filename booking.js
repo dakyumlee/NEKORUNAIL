@@ -1,1 +1,0 @@
-console.log('✅ booking.js 로드됨');

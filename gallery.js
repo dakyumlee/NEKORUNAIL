@@ -1,1 +1,0 @@
-console.log('✅ gallary.js 로드됨');

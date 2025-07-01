@@ -27,7 +27,8 @@
       <div class="admin-nav">
         <button class="nav-btn active" data-tab="dashboard">📈 대시보드</button>
         <button class="nav-btn" data-tab="bookings">📅 예약 관리</button>
-        <button class="nav-btn" data-tab="gallery">🖼️ 메인 슬라이더 관리</button>
+        <button class="nav-btn" data-tab="gallery">🖼️ 갤러리 관리</button>
+        <button class="nav-btn" data-tab="slideshow">🎨 메인 슬라이드쇼 관리</button>
         <button class="nav-btn" data-tab="reviews">💬 후기 관리</button>
         <button class="nav-btn logout" id="logout-btn">🚪 로그아웃</button>
       </div>
@@ -46,7 +47,7 @@
           <div class="stats-icon">🖼️</div>
           <div class="stats-info">
             <h3 id="total-gallery">0</h3>
-            <p>메인 슬라이더 이미지</p>
+            <p>갤러리 이미지</p>
           </div>
         </div>
         <div class="stats-card">
@@ -57,10 +58,10 @@
           </div>
         </div>
         <div class="stats-card">
-          <div class="stats-icon">📈</div>
+          <div class="stats-icon">🎨</div>
           <div class="stats-info">
-            <h3 id="today-bookings">0</h3>
-            <p>오늘 예약</p>
+            <h3 id="total-slideshow">0</h3>
+            <p>메인 슬라이드쇼</p>
           </div>
         </div>
       </div>
@@ -90,7 +91,7 @@
 
     <section id="gallery-tab" class="tab-content">
       <div class="section-header">
-        <h2>🖼️ 메인 슬라이더 관리</h2>
+        <h2>🖼️ 갤러리 관리</h2>
         <button id="upload-toggle" class="primary-btn">➕ 새 이미지 업로드</button>
       </div>
       
@@ -114,6 +115,33 @@
       <div id="gallery-list" class="gallery-grid"></div>
     </section>
 
+    <section id="slideshow-tab" class="tab-content">
+      <div class="section-header">
+        <h2>🎨 메인 슬라이드쇼 관리</h2>
+        <button id="slideshow-upload-toggle" class="primary-btn">➕ 새 슬라이드 이미지 업로드</button>
+      </div>
+      
+      <div id="slideshow-upload-section" class="upload-form" style="display: none;">
+        <form id="slideshow-upload-form">
+          <div class="upload-area">
+            <input type="file" id="slideshow-file-input" accept="image/*" required />
+            <div class="upload-placeholder">
+              <div class="upload-icon">📷</div>
+              <p>메인 슬라이드쇼 이미지를 선택하거나 드래그해주세요</p>
+            </div>
+          </div>
+          <input type="text" id="slideshow-title-input" placeholder="슬라이드 제목 (예: 6월 하기 네일)" required />
+          <input type="text" id="slideshow-subtitle-input" placeholder="슬라이드 부제목 (예: 8.0)" />
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">업로드</button>
+            <button type="button" id="slideshow-cancel-upload" class="secondary-btn">취소</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="slideshow-list" class="gallery-grid"></div>
+    </section>
+
     <section id="reviews-tab" class="tab-content">
       <div class="section-header">
         <h2>💬 후기 관리</h2>
@@ -130,90 +158,86 @@
     </section>
   </main>
 
-  <script type="module">
+  <script src="supabase.js"></script>
+
+  <script>
     let isLoggedIn = false;
-    let firebaseLoaded = false;
-    let db, storage;
     let dataCache = {
       bookings: { data: null, timestamp: 0 },
       gallery: { data: null, timestamp: 0 },
+      slideshow: { data: null, timestamp: 0 },
       reviews: { data: null, timestamp: 0 }
     };
     const CACHE_DURATION = 2 * 60 * 1000;
-
-    async function loadFirebase() {
-      if (firebaseLoaded) return;
-
-      try {
-        // 더 안정적인 Firebase 버전 사용
-        const [
-          { initializeApp },
-          { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp, where, connectFirestoreEmulator },
-          { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, connectStorageEmulator }
-        ] = await Promise.all([
-          import("https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"),
-          import("https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js"),
-          import("https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js")
-        ]);
-
-        const firebaseConfig = {
-          apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
-          authDomain: "nekorunail.firebaseapp.com",
-          projectId: "nekorunail",
-          storageBucket: "nekorunail.firebasestorage.app",
-          messagingSenderId: "571846382457",
-          appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
-          measurementId: "G-MW8CBHGSLG"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        storage = getStorage(app);
-
-        window.fbCollection = collection;
-        window.fbAddDoc = addDoc;
-        window.fbGetDocs = getDocs;
-        window.fbDeleteDoc = deleteDoc;
-        window.fbDoc = doc;
-        window.fbUpdateDoc = updateDoc;
-        window.fbQuery = query;
-        window.fbOrderBy = orderBy;
-        window.fbServerTimestamp = serverTimestamp;
-        window.fbWhere = where;
-        window.fbRef = ref;
-        window.fbUploadBytes = uploadBytes;
-        window.fbGetDownloadURL = getDownloadURL;
-        window.fbDeleteObject = deleteObject;
-
-        firebaseLoaded = true;
-        console.log('Firebase 초기화 완료');
-        
-        // 연결 테스트
-        try {
-          const testQuery = await window.fbGetDocs(window.fbQuery(window.fbCollection(db, "reviews"), window.fbOrderBy("createdAt", "desc")));
-          console.log('Firebase 연결 테스트 성공:', testQuery.size);
-        } catch (testError) {
-          console.warn('Firebase 연결 테스트 실패:', testError);
-        }
-        
-      } catch (error) {
-        console.error('Firebase 로드 실패:', error);
-        showNotification('Firebase 연결 실패: ' + error.message, 'error');
-        
-        // 재시도 로직
-        setTimeout(() => {
-          firebaseLoaded = false;
-          console.log('Firebase 재연결 시도...');
-        }, 5000);
-        
-        throw error;
-      }
-    }
 
     function getCachedData(type) {
       const cached = dataCache[type];
       if (cached.data && (Date.now() - cached.timestamp < CACHE_DURATION)) {
         return cached.data;
+      }
+    }
+
+    async function handleSlideshowUpload(e) {
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('slideshow-file-input');
+      const titleInput = document.getElementById('slideshow-title-input');
+      const subtitleInput = document.getElementById('slideshow-subtitle-input');
+      const file = fileInput.files[0];
+      const title = titleInput.value.trim();
+      const subtitle = subtitleInput.value.trim();
+      
+      if (!file) {
+          showNotification('파일을 선택해주세요.', 'error');
+          return;
+      }
+      
+      if (!title) {
+          showNotification('슬라이드 제목을 입력해주세요.', 'error');
+          return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+          showNotification('이미지 파일만 업로드 가능합니다.', 'error');
+          return;
+      }
+      
+      try {
+          showNotification('업로드 중...', 'info');
+          
+          const reader = new FileReader();
+          reader.onload = async function(e) {
+              try {
+                  const slideshowData = {
+                      image_url: e.target.result,
+                      title: title,
+                      subtitle: subtitle || ''
+                  };
+                  
+                  await window.addSlideshowImage(slideshowData);
+                  
+                  showNotification('✅ 슬라이드 업로드 완료!', 'success');
+                  
+                  const uploadForm = document.getElementById('slideshow-upload-form');
+                  if (uploadForm) uploadForm.reset();
+                  
+                  const uploadSection = document.getElementById('slideshow-upload-section');
+                  if (uploadSection) uploadSection.style.display = 'none';
+                  
+                  clearCache('slideshow');
+                  loadSlideshow();
+                  loadDashboard();
+                  
+              } catch (error) {
+                  console.error('슬라이드 업로드 실패:', error);
+                  showNotification('슬라이드 업로드 실패: ' + error.message, 'error');
+              }
+          };
+          reader.readAsDataURL(file);
+          
+      } catch (error) {
+          console.error('슬라이드 업로드 실패:', error);
+          showNotification('슬라이드 업로드 실패', 'error');
       }
       return null;
     }
@@ -232,13 +256,75 @@
         Object.keys(dataCache).forEach(key => {
           dataCache[key] = { data: null, timestamp: 0 };
         });
+    }
+
+    async function loadSlideshow() {
+      const slideshowList = document.getElementById('slideshow-list');
+      if (!slideshowList) return;
+      
+      try {
+          slideshowList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">슬라이드쇼를 불러오는 중...</div>';
+          
+          let slideshowData = getCachedData('slideshow');
+          
+          if (!slideshowData) {
+              slideshowData = await window.loadSlideshowImages();
+              setCachedData('slideshow', slideshowData);
+          }
+          
+          displaySlideshow(slideshowData);
+          
+      } catch (error) {
+          console.error('슬라이드쇼 로드 실패:', error);
+          slideshowList.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #ef4444;">
+              <h3>슬라이드쇼 로드 실패</h3>
+              <p>오류: ${error.message}</p>
+              <button onclick="loadSlideshow()" style="background: hotpink; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer;">다시 시도</button>
+            </div>
+          `;
       }
     }
 
-    window.showBookingDetails = function(docId, bookingData) {
+    function displaySlideshow(slideshowData) {
+      const slideshowList = document.getElementById('slideshow-list');
+      
+      slideshowList.innerHTML = '';
+      
+      if (slideshowData.length === 0) {
+          slideshowList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">슬라이드쇼가 비어있습니다.</div>';
+          return;
+      }
+      
+      slideshowData.forEach(data => {
+          const card = document.createElement('div');
+          card.className = 'admin-gallery-card';
+          
+          const createdAt = new Date(data.created_at);
+          const dateString = createdAt.toLocaleDateString('ko-KR');
+          
+          card.innerHTML = `
+              <img src="${data.image_url}" alt="슬라이드쇼 이미지" loading="lazy" />
+              <div class="card-content">
+                  <div class="card-info">
+                      <h4>${data.title || '무제'}</h4>
+                      <p>${data.subtitle || ''}</p>
+                      <p>업로드: ${dateString}</p>
+                  </div>
+                  <div class="card-actions">
+                      <button class="delete-btn" onclick="deleteSlideshowHandler('${data.id}')">삭제</button>
+                  </div>
+              </div>
+          `;
+          slideshowList.appendChild(card);
+      });
+      }
+    }
+
+    window.showBookingDetails = function(id, bookingData) {
       const services = Array.isArray(bookingData.services) ? bookingData.services.join(', ') : (bookingData.services || '기본 케어');
       const notes = bookingData.notes || '특이사항 없음';
-      const createdAt = bookingData.createdAt && bookingData.createdAt.toDate ? bookingData.createdAt.toDate() : new Date();
+      const createdAt = new Date(bookingData.created_at);
       const createdDate = createdAt.toLocaleDateString('ko-KR');
       const createdTime = createdAt.toLocaleTimeString('ko-KR');
       
@@ -335,14 +421,6 @@
       
       document.body.appendChild(modal);
       
-      const escHandler = function(e) {
-          if (e.key === 'Escape') {
-              closeBookingModal();
-              document.removeEventListener('keydown', escHandler);
-          }
-      };
-      document.addEventListener('keydown', escHandler);
-      
       modal.addEventListener('click', function(e) {
           if (e.target === modal) {
               closeBookingModal();
@@ -363,11 +441,6 @@
       const loginBtn = document.getElementById('login-btn');
       const adminPass = document.getElementById('admin-pass');
       const logoutBtn = document.getElementById('logout-btn');
-      
-      if (!loginOverlay || !adminPanel || !loginBtn || !adminPass) {
-          console.error('필수 요소를 찾을 수 없습니다');
-          return;
-      }
       
       checkLoginStatus(loginOverlay, adminPanel);
       setupEvents(loginBtn, adminPass, logoutBtn, loginOverlay, adminPanel);
@@ -430,6 +503,11 @@
       const cancelUpload = document.getElementById('cancel-upload');
       const uploadForm = document.getElementById('upload-form');
       
+      const slideshowUploadToggle = document.getElementById('slideshow-upload-toggle');
+      const slideshowUploadSection = document.getElementById('slideshow-upload-section');
+      const slideshowCancelUpload = document.getElementById('slideshow-cancel-upload');
+      const slideshowUploadForm = document.getElementById('slideshow-upload-form');
+      
       if (uploadToggle && uploadSection) {
           uploadToggle.onclick = function() {
               const isHidden = uploadSection.style.display === 'none' || !uploadSection.style.display;
@@ -446,6 +524,24 @@
       
       if (uploadForm) {
           uploadForm.addEventListener('submit', handleFileUpload);
+      }
+      
+      if (slideshowUploadToggle && slideshowUploadSection) {
+          slideshowUploadToggle.onclick = function() {
+              const isHidden = slideshowUploadSection.style.display === 'none' || !slideshowUploadSection.style.display;
+              slideshowUploadSection.style.display = isHidden ? 'block' : 'none';
+          };
+      }
+      
+      if (slideshowCancelUpload && slideshowUploadSection) {
+          slideshowCancelUpload.onclick = function() {
+              slideshowUploadSection.style.display = 'none';
+              if (slideshowUploadForm) slideshowUploadForm.reset();
+          };
+      }
+      
+      if (slideshowUploadForm) {
+          slideshowUploadForm.addEventListener('submit', handleSlideshowUpload);
       }
       
       const refreshBookings = document.getElementById('refresh-bookings');
@@ -545,6 +641,9 @@
           case 'gallery':
               loadGallery();
               break;
+          case 'slideshow':
+              loadSlideshow();
+              break;
           case 'reviews':
               loadReviews();
               break;
@@ -555,53 +654,29 @@
       try {
           const cachedBookings = getCachedData('bookings');
           const cachedGallery = getCachedData('gallery');
+          const cachedSlideshow = getCachedData('slideshow');
           const cachedReviews = getCachedData('reviews');
 
-          if (cachedBookings && cachedGallery && cachedReviews) {
-              updateDashboardStats(cachedBookings, cachedGallery, cachedReviews);
+          if (cachedBookings && cachedGallery && cachedSlideshow && cachedReviews) {
+              updateDashboardStats(cachedBookings, cachedGallery, cachedSlideshow, cachedReviews);
               loadRecentBookings(cachedBookings);
               showNotification('📊 캐시된 데이터로 업데이트됨!', 'success');
               return;
           }
 
-          await loadFirebase();
-          
-          console.log('대시보드 데이터 로드 시작...');
-          
-          // 각각 개별적으로 로드하여 어떤 것이 실패하는지 확인
-          const bookingsData = [];
-          const galleryData = [];
-          const reviewsData = [];
-          
-          try {
-              const bookingsSnapshot = await window.fbGetDocs(window.fbCollection(db, "bookings"));
-              bookingsSnapshot.forEach(doc => bookingsData.push({ id: doc.id, ...doc.data() }));
-              console.log('예약 데이터 로드 성공:', bookingsData.length);
-          } catch (bookingError) {
-              console.error('예약 데이터 로드 실패:', bookingError);
-          }
-          
-          try {
-              const gallerySnapshot = await window.fbGetDocs(window.fbCollection(db, "gallery"));
-              gallerySnapshot.forEach(doc => galleryData.push({ id: doc.id, ...doc.data() }));
-              console.log('갤러리 데이터 로드 성공:', galleryData.length);
-          } catch (galleryError) {
-              console.error('갤러리 데이터 로드 실패:', galleryError);
-          }
-          
-          try {
-              const reviewsSnapshot = await window.fbGetDocs(window.fbCollection(db, "reviews"));
-              reviewsSnapshot.forEach(doc => reviewsData.push({ id: doc.id, ...doc.data() }));
-              console.log('리뷰 데이터 로드 성공:', reviewsData.length);
-          } catch (reviewError) {
-              console.error('리뷰 데이터 로드 실패:', reviewError);
-          }
+          const [bookingsData, galleryData, slideshowData, reviewsData] = await Promise.all([
+              window.loadBookings(),
+              window.loadGalleryImages(),
+              window.loadSlideshowImages(),
+              window.loadReviews('newest', 100)
+          ]);
           
           setCachedData('bookings', bookingsData);
           setCachedData('gallery', galleryData);
+          setCachedData('slideshow', slideshowData);
           setCachedData('reviews', reviewsData);
           
-          updateDashboardStats(bookingsData, galleryData, reviewsData);
+          updateDashboardStats(bookingsData, galleryData, slideshowData, reviewsData);
           loadRecentBookings(bookingsData);
           
           showNotification('📊 데이터 로드 완료!', 'success');
@@ -611,15 +686,15 @@
       }
     }
 
-    function updateDashboardStats(bookingsData, galleryData, reviewsData) {
+    function updateDashboardStats(bookingsData, galleryData, slideshowData, reviewsData) {
       const today = new Date().toISOString().split('T')[0];
       const todayBookingsCount = bookingsData.filter(booking => booking.date === today).length;
       
       const stats = {
           'total-bookings': bookingsData.length,
           'total-gallery': galleryData.length,
-          'total-reviews': reviewsData.length,
-          'today-bookings': todayBookingsCount
+          'total-slideshow': slideshowData.length,
+          'total-reviews': reviewsData.length
       };
       
       Object.entries(stats).forEach(([id, value]) => {
@@ -633,11 +708,7 @@
       if (!recentBookings) return;
       
       const sortedBookings = bookingsData
-          .sort((a, b) => {
-              const aTime = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-              const bTime = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-              return bTime - aTime;
-          })
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
           .slice(0, 5);
       
       recentBookings.innerHTML = '';
@@ -651,7 +722,7 @@
           const item = document.createElement('div');
           item.className = 'recent-item';
           
-          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const createdAt = new Date(data.created_at);
           const timeString = createdAt.toLocaleDateString('ko-KR');
           
           item.innerHTML = `
@@ -675,15 +746,7 @@
           let bookingsData = getCachedData('bookings');
           
           if (!bookingsData) {
-              await loadFirebase();
-              const q = window.fbQuery(window.fbCollection(db, "bookings"), window.fbOrderBy("createdAt", "desc"));
-              const snapshot = await window.fbGetDocs(q);
-              
-              bookingsData = [];
-              snapshot.forEach(doc => {
-                  bookingsData.push({ id: doc.id, ...doc.data() });
-              });
-              
+              bookingsData = await window.loadBookings();
               setCachedData('bookings', bookingsData);
           }
           
@@ -735,7 +798,7 @@
               <div style="font-size: 0.9rem; color: #666;">${services}</div>
               <div><span class="status-badge ${statusClass}">${statusText}</span></div>
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                  <select onchange="updateBookingStatus('${data.id}', this.value)" style="font-size: 0.9rem;">
+                  <select onchange="updateBookingStatusHandler('${data.id}', this.value)" style="font-size: 0.9rem;">
                       <option value="pending" ${status === 'pending' ? 'selected' : ''}>대기</option>
                       <option value="confirmed" ${status === 'confirmed' ? 'selected' : ''}>확정</option>
                       <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>취소</option>
@@ -749,7 +812,7 @@
                       cursor: pointer; 
                       font-size: 0.8rem;
                   ">상세</button>
-                  <button class="delete-btn" onclick="deleteBooking('${data.id}')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">삭제</button>
+                  <button class="delete-btn" onclick="deleteBookingHandler('${data.id}')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">삭제</button>
               </div>
           `;
           bookingsList.appendChild(row);
@@ -766,20 +829,7 @@
           let galleryData = getCachedData('gallery');
           
           if (!galleryData) {
-              await loadFirebase();
-              
-              // 간단한 쿼리로 시작
-              console.log('갤러리 데이터 로드 시작...');
-              const galleryCollection = window.fbCollection(db, "gallery");
-              const snapshot = await window.fbGetDocs(galleryCollection);
-              
-              galleryData = [];
-              snapshot.forEach(doc => {
-                  console.log('갤러리 문서:', doc.id, doc.data());
-                  galleryData.push({ id: doc.id, ...doc.data() });
-              });
-              
-              console.log('로드된 갤러리 데이터:', galleryData);
+              galleryData = await window.loadGalleryImages();
               setCachedData('gallery', galleryData);
           }
           
@@ -811,18 +861,18 @@
           const card = document.createElement('div');
           card.className = 'admin-gallery-card';
           
-          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const createdAt = new Date(data.created_at);
           const dateString = createdAt.toLocaleDateString('ko-KR');
           
           card.innerHTML = `
-              <img src="${data.imageUrl}" alt="갤러리 이미지" loading="lazy" />
+              <img src="${data.image_url}" alt="갤러리 이미지" loading="lazy" />
               <div class="card-content">
                   <div class="card-info">
                       <h4>${data.caption || '무제'}</h4>
                       <p>업로드: ${dateString}</p>
                   </div>
                   <div class="card-actions">
-                      <button class="delete-btn" onclick="deleteGalleryItem('${data.id}', '${data.imageUrl}')">삭제</button>
+                      <button class="delete-btn" onclick="deleteGalleryHandler('${data.id}')">삭제</button>
                   </div>
               </div>
           `;
@@ -838,36 +888,10 @@
           let reviewsData = getCachedData('reviews');
           
           if (!reviewsData) {
-              await loadFirebase();
-              
               const sortSelect = document.getElementById('review-sort');
               const sortValue = sortSelect ? sortSelect.value : 'newest';
               
-              let orderField = 'createdAt';
-              let orderDirection = 'desc';
-              
-              switch (sortValue) {
-                  case 'oldest':
-                      orderDirection = 'asc';
-                      break;
-                  case 'highest':
-                      orderField = 'rating';
-                      orderDirection = 'desc';
-                      break;
-                  case 'lowest':
-                      orderField = 'rating';
-                      orderDirection = 'asc';
-                      break;
-              }
-              
-              const q = window.fbQuery(window.fbCollection(db, "reviews"), window.fbOrderBy(orderField, orderDirection));
-              const snapshot = await window.fbGetDocs(q);
-              
-              reviewsData = [];
-              snapshot.forEach(doc => {
-                  reviewsData.push({ id: doc.id, ...doc.data() });
-              });
-              
+              reviewsData = await window.loadReviews(sortValue, 100);
               setCachedData('reviews', reviewsData);
           }
           
@@ -893,15 +917,15 @@
           const card = document.createElement('div');
           card.className = 'admin-review-card';
           
-          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const createdAt = new Date(data.created_at);
           const dateString = createdAt.toLocaleDateString('ko-KR');
           
           const rating = data.rating || 5;
           const starsDisplay = '⭐'.repeat(rating);
           
-          const imageHtml = data.imageUrl ? 
+          const imageHtml = data.image_url ? 
               `<div style="text-align: center; margin-top: 1rem;">
-                 <img src="${data.imageUrl}" alt="후기 사진" style="max-width: 200px; max-height: 150px; border-radius: 8px;" loading="lazy" />
+                 <img src="${data.image_url}" alt="후기 사진" style="max-width: 200px; max-height: 150px; border-radius: 8px;" loading="lazy" />
                </div>` : '';
           
           card.innerHTML = `
@@ -913,7 +937,7 @@
               <div class="review-content">${data.content}</div>
               ${imageHtml}
               <div class="review-actions">
-                  <button class="delete-btn" onclick="deleteReview('${data.id}', '${data.imageUrl || ''}')">삭제</button>
+                  <button class="delete-btn" onclick="deleteReviewHandler('${data.id}')">삭제</button>
               </div>
           `;
           reviewsList.appendChild(card);
@@ -941,29 +965,34 @@
       try {
           showNotification('업로드 중...', 'info');
           
-          await loadFirebase();
-          
-          const imageRef = window.fbRef(storage, `gallery/${Date.now()}_${file.name}`);
-          await window.fbUploadBytes(imageRef, file);
-          const imageUrl = await window.fbGetDownloadURL(imageRef);
-          
-          await window.fbAddDoc(window.fbCollection(db, "gallery"), {
-              imageUrl,
-              caption: caption || '무제',
-              createdAt: window.fbServerTimestamp()
-          });
-          
-          showNotification('✅ 업로드 완료!', 'success');
-          
-          const uploadForm = document.getElementById('upload-form');
-          if (uploadForm) uploadForm.reset();
-          
-          const uploadSection = document.getElementById('upload-section');
-          if (uploadSection) uploadSection.style.display = 'none';
-          
-          clearCache('gallery');
-          loadGallery();
-          loadDashboard();
+          const reader = new FileReader();
+          reader.onload = async function(e) {
+              try {
+                  const imageData = {
+                      image_url: e.target.result,
+                      caption: caption || '무제'
+                  };
+                  
+                  await window.addGalleryImage(imageData);
+                  
+                  showNotification('✅ 업로드 완료!', 'success');
+                  
+                  const uploadForm = document.getElementById('upload-form');
+                  if (uploadForm) uploadForm.reset();
+                  
+                  const uploadSection = document.getElementById('upload-section');
+                  if (uploadSection) uploadSection.style.display = 'none';
+                  
+                  clearCache('gallery');
+                  loadGallery();
+                  loadDashboard();
+                  
+              } catch (error) {
+                  console.error('업로드 실패:', error);
+                  showNotification('업로드 실패: ' + error.message, 'error');
+              }
+          };
+          reader.readAsDataURL(file);
           
       } catch (error) {
           console.error('업로드 실패:', error);
@@ -971,12 +1000,9 @@
       }
     }
 
-    window.updateBookingStatus = async function(docId, newStatus) {
+    window.updateBookingStatusHandler = async function(id, newStatus) {
       try {
-          await loadFirebase();
-          await window.fbUpdateDoc(window.fbDoc(db, "bookings", docId), {
-              status: newStatus
-          });
+          await window.updateBookingStatus(id, newStatus);
           showNotification('상태 업데이트 완료!', 'success');
           clearCache('bookings');
           loadBookings();
@@ -986,12 +1012,11 @@
       }
     };
 
-    window.deleteBooking = async function(docId) {
+    window.deleteBookingHandler = async function(id) {
       if (!confirm('정말로 삭제하시겠습니까?')) return;
       
       try {
-          await loadFirebase();
-          await window.fbDeleteDoc(window.fbDoc(db, "bookings", docId));
+          await window.deleteRecord('bookings', id);
           showNotification('삭제 완료!', 'success');
           clearCache('bookings');
           loadBookings();
@@ -1002,22 +1027,11 @@
       }
     };
 
-    window.deleteGalleryItem = async function(docId, imageUrl) {
+    window.deleteGalleryHandler = async function(id) {
       if (!confirm('정말로 삭제하시겠습니까?')) return;
       
       try {
-          await loadFirebase();
-          await window.fbDeleteDoc(window.fbDoc(db, "gallery", docId));
-          
-          if (imageUrl) {
-              try {
-                  const imageRef = window.fbRef(storage, imageUrl);
-                  await window.fbDeleteObject(imageRef);
-              } catch (imageError) {
-                  console.warn('이미지 삭제 실패:', imageError);
-              }
-          }
-          
+          await window.deleteRecord('gallery', id);
           showNotification('삭제 완료!', 'success');
           clearCache('gallery');
           loadGallery();
@@ -1028,22 +1042,26 @@
       }
     };
 
-    window.deleteReview = async function(docId, imageUrl) {
+    window.deleteSlideshowHandler = async function(id) {
       if (!confirm('정말로 삭제하시겠습니까?')) return;
       
       try {
-          await loadFirebase();
-          await window.fbDeleteDoc(window.fbDoc(db, "reviews", docId));
-          
-          if (imageUrl) {
-              try {
-                  const imageRef = window.fbRef(storage, imageUrl);
-                  await window.fbDeleteObject(imageRef);
-              } catch (imageError) {
-                  console.warn('이미지 삭제 실패:', imageError);
-              }
-          }
-          
+          await window.deleteRecord('slideshow', id);
+          showNotification('삭제 완료!', 'success');
+          clearCache('slideshow');
+          loadSlideshow();
+          loadDashboard();
+      } catch (error) {
+          console.error('삭제 실패:', error);
+          showNotification('삭제 실패', 'error');
+      }
+    };
+
+    window.deleteReviewHandler = async function(id) {
+      if (!confirm('정말로 삭제하시겠습니까?')) return;
+      
+      try {
+          await window.deleteRecord('reviews', id);
           showNotification('삭제 완료!', 'success');
           clearCache('reviews');
           loadReviews();
@@ -1054,59 +1072,11 @@
       }
     };
 
-    function showNotification(message, type = 'success') {
-      const existing = document.querySelector('.notification');
-      if (existing) existing.remove();
-      
-      const notification = document.createElement('div');
-      notification.className = `notification ${type}`;
-      notification.textContent = message;
-      
-      Object.assign(notification.style, {
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          padding: '1rem 1.5rem',
-          borderRadius: '10px',
-          color: 'white',
-          fontWeight: '600',
-          zIndex: '10001',
-          fontSize: '0.9rem',
-          maxWidth: '300px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          cursor: 'pointer'
-      });
-
-      if (type === 'success') {
-          notification.style.background = '#10b981';
-      } else if (type === 'error') {
-          notification.style.background = '#ef4444';
-      } else if (type === 'warning') {
-          notification.style.background = '#f59e0b';
-      } else {
-          notification.style.background = '#3b82f6';
-      }
-      
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-          if (notification.parentNode) {
-              notification.remove();
-          }
-      }, 3000);
-      
-      notification.addEventListener('click', () => {
-          if (notification.parentNode) {
-              notification.remove();
-          }
-      });
-    }
-
     document.addEventListener('DOMContentLoaded', function() {
       initializeAdmin();
     });
 
-    console.log('관리자 스크립트 로드 완료');
+    console.log('Supabase 관리자 스크립트 로드 완료');
   </script>
 </body>
 </html>
