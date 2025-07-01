@@ -147,31 +147,12 @@
     <p>NEKORUNAIL ⎜ Instagram @NEKORUnail ⎜ 2025</p>
   </footer>
   <script src="supabase.js"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import {
-      getFirestore, collection, addDoc, getDocs,
-      query, orderBy, limit, startAfter, serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-    import {
-      getStorage, ref, uploadBytes, getDownloadURL
-    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
-      authDomain: "nekorunail.firebaseapp.com",
-      projectId: "nekorunail",
-      storageBucket: "nekorunail.firebasestorage.app",
-      messagingSenderId: "571846382457",
-      appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
-      measurementId: "G-MW8CBHGSLG"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-
-    let lastVisible = null, isLoading = false, selectedRating = 0;
+  <script>
+    let selectedRating = 0;
+    let currentPage = 0;
     const REVIEWS_PER_PAGE = 5;
+    let allReviews = [];
+    let isLoading = false;
 
     document.addEventListener("DOMContentLoaded", () => {
       initializeStarRating();
@@ -236,7 +217,7 @@
     }
 
     function initializeReviewFlow() {
-      document.getElementById("review-sort").addEventListener("change", () => { lastVisible=null; loadReviews(true); });
+      document.getElementById("review-sort").addEventListener("change", () => loadReviews(true));
       document.getElementById("load-more-btn").addEventListener("click", () => loadReviews(false));
       document.getElementById("review-form").addEventListener("submit", async e => { e.preventDefault(); await submitReview(); });
       loadReviews(true);
@@ -245,7 +226,7 @@
     async function submitReview() {
       const name = document.getElementById("reviewer").value.trim();
       const content = document.getElementById("review-content").value.trim();
-      if(!name||!content||selectedRating<1) return alert("모든 항목을 채워주세요");
+      if(!name||!content||selectedRating<1) return window.showNotification("모든 항목을 채워주세요", "error");
       const btn = document.getElementById("submit-btn");
       const txt = btn.querySelector('.btn-text');
       const spin = btn.querySelector('.loading-spinner');
@@ -254,53 +235,77 @@
         let imageUrl = null;
         const file = document.getElementById("review-image").files[0];
         if(file){
-          const r = ref(storage, `reviews/${Date.now()}_${file.name}`);
-          await uploadBytes(r, file);
-          imageUrl = await getDownloadURL(r);
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('upload_preset', 'nekorunail');
+          
+          const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/ddlkhq98s/image/upload', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const cloudinaryData = await cloudinaryResponse.json();
+          imageUrl = cloudinaryData.secure_url;
         }
-        await addDoc(collection(db,"reviews"), { name, content, rating:selectedRating, imageUrl, createdAt: serverTimestamp() });
-        alert("후기 등록 완료!");
+        await window.addReview({ name, content, rating:selectedRating, image_url: imageUrl });
+        window.showNotification("후기 등록 완료!", "success");
         document.getElementById("review-form").reset();
         selectedRating=0; updateStars(document.querySelectorAll('.star'),0); updateRatingText(document.querySelector('.rating-text'),0);
-        lastVisible=null; loadReviews(true);
-      } catch(err){ console.error(err); alert("등록 실패"); }
+        loadReviews(true);
+      } catch(err){ console.error(err); window.showNotification("등록 실패", "error"); }
       finally{ txt.style.display='inline'; spin.style.display='none'; btn.disabled=false; }
     }
 
     async function loadReviews(reset) {
-      if(isLoading) return; isLoading=true;
+      if(isLoading) return; 
+      isLoading=true;
       const cont = document.getElementById("reviews-container"), btn = document.getElementById("load-more-btn");
-      if(reset) { cont.innerHTML='<div class="loading-reviews"><p>로딩 중…</p></div>'; lastVisible=null; }
-      const sort = document.getElementById("review-sort").value;
-      let field='createdAt', dir='desc';
-      if(sort==='oldest') dir='asc';
-      if(sort==='highest'){ field='rating'; dir='desc'; }
-      if(sort==='lowest'){ field='rating'; dir='asc'; }
-      let q = reset
-        ? query(collection(db,"reviews"), orderBy(field,dir), limit(REVIEWS_PER_PAGE))
-        : query(collection(db,"reviews"), orderBy(field,dir), startAfter(lastVisible), limit(REVIEWS_PER_PAGE));
-      const snap = await getDocs(q);
-      if(reset) cont.innerHTML='';
-      if(snap.empty && reset){
-        cont.innerHTML='<div class="no-reviews"><p>등록된 후기가 없습니다.</p><p>첫 후기를 남겨보세요!</p></div>';
-        btn.style.display='none'; isLoading=false; return;
+      if(reset) { 
+        cont.innerHTML='<div class="loading-reviews"><p>로딩 중…</p></div>'; 
+        currentPage = 0; 
+        allReviews = [];
       }
-      snap.forEach(doc => {
-        const d=doc.data();
-        const date = d.createdAt?.toDate().toLocaleDateString('ko-KR')||'';
-        const stars = '⭐'.repeat(d.rating)+'☆'.repeat(5-d.rating);
-        const imgHtml = d.imageUrl?`<div class="review-image-container"><img src="${d.imageUrl}" class="review-image" onclick="openImageModal('${d.imageUrl}','${d.name}님의 후기')" /></div>`:'';
-        const box=document.createElement('div'); box.className='review-box';
-        box.innerHTML=`
-          <div class="review-header"><strong class="review-author">${d.name}</strong><span class="review-date">${date}</span></div>
-          <div class="review-rating">${stars}</div>
-          <div class="review-content">${d.content}</div>
-          ${imgHtml}
-        `;
-        cont.appendChild(box);
-        lastVisible=doc;
-      });
-      btn.style.display = snap.docs.length===REVIEWS_PER_PAGE ? 'block' : 'none';
+      
+      try {
+        const sort = document.getElementById("review-sort").value;
+        const reviews = await window.loadReviews(sort);
+        
+        if(reset) {
+          cont.innerHTML='';
+          allReviews = reviews;
+        }
+        
+        if(allReviews.length === 0 && reset){
+          cont.innerHTML='<div class="no-reviews"><p>등록된 후기가 없습니다.</p><p>첫 후기를 남겨보세요!</p></div>';
+          btn.style.display='none'; 
+          isLoading=false; 
+          return;
+        }
+        
+        const startIndex = currentPage * REVIEWS_PER_PAGE;
+        const endIndex = startIndex + REVIEWS_PER_PAGE;
+        const reviewsToShow = allReviews.slice(startIndex, endIndex);
+        
+        reviewsToShow.forEach(d => {
+          const date = new Date(d.created_at).toLocaleDateString('ko-KR');
+          const stars = '⭐'.repeat(d.rating) + '☆'.repeat(5-d.rating);
+          const imgHtml = d.image_url?`<div class="review-image-container"><img src="${d.image_url}" class="review-image" onclick="openImageModal('${d.image_url}','${d.name}님의 후기')" /></div>`:'';
+          const box=document.createElement('div'); box.className='review-box';
+          box.innerHTML=`
+            <div class="review-header"><strong class="review-author">${d.name}</strong><span class="review-date">${date}</span></div>
+            <div class="review-rating">${stars}</div>
+            <div class="review-content">${d.content}</div>
+            ${imgHtml}
+          `;
+          cont.appendChild(box);
+        });
+        
+        currentPage++;
+        btn.style.display = endIndex < allReviews.length ? 'block' : 'none';
+      } catch(error) {
+        console.error('리뷰 로드 실패:', error);
+        if(reset) cont.innerHTML='<div class="error-message"><p>리뷰 로드에 실패했습니다.</p></div>';
+      }
       isLoading=false;
     }
 
@@ -313,7 +318,7 @@
       document.addEventListener('keydown',e=>{ if(e.key==='Escape') m.remove(); });
     };
 
-    console.log('리뷰 페이지 Firebase 로직 초기화 완료');
+    console.log('리뷰 페이지 Supabase 연동 완료');
   </script>
 </body>
 </html>

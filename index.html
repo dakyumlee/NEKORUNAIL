@@ -8,31 +8,25 @@
 </head>
 <body>
   <header class="hero">
-    <h1>NEKORUNAIL</h1>
-    <p>부산 부산진구 가야대로750번길 4, 3층</p>
+    <h1><a href="admin.html">NEKORUNAIL</a></h1>
+    <p>4, Gaya-daero 750beon-gil Busanjin-gu Busan 3floor</p>
     <nav>
       <ul>
         <li><a href="index.html">홈</a></li>
         <li><a href="gallery.html">갤러리</a></li>
         <li><a href="booking.html">예약</a></li>
-        <li><a href="review.html">리뷰</a></li>
-        <li><a href="come.html">오시는 길</a></li>
+        <li><a href="review.html">리뷰 남기기</a></li>
+        <li><a href="come.html">찾아오시는 길</a></li>
       </ul>
     </nav>
   </header>
 
-  <section class="intro-section">
-    <div class="intro-content">
-      <h2><a href="admin.html">✨NEKORUNAIL✨</a></h2>
-      <h3>네일 디자인</h3>
-    </div>
-  </section>
-
   <section id="gallery">
-    <div id="gallery-slider" class="gallery-slider">
-      <div class="loading-slider">
-        <div class="loading-spinner"></div>
-        <p>디자인을 불러오는 중...</p>
+    <h2>네일 디자인</h2>
+    <div class="gallery-slider" id="gallery-slider">
+      <div class="gallery-loading">
+        <div style="display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid hotpink; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <p>갤러리를 불러오는 중...</p>
       </div>
     </div>
   </section>
@@ -42,7 +36,7 @@
     <p class="section-subtitle">실제 고객님들이 남겨주신 소중한 후기입니다</p>
     <div id="reviews-container" class="reviews-preview-grid">
       <div class="review-loading">
-        <div class="loading-spinner"></div>
+        <div style="display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid hotpink; border-radius: 50%; animation: spin 1s linear infinite;"></div>
         <p>후기를 불러오는 중...</p>
       </div>
     </div>
@@ -54,220 +48,166 @@
   <footer>
     <p>NEKORUNAIL ⎜ Instagram @nekorunail ⎜ 2025</p>
   </footer>
+
   <script src="supabase.js"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-
-    const app = initializeApp({
-      apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
-      authDomain: "nekorunail.firebaseapp.com",
-      projectId: "nekorunail",
-    });
-    const db = getFirestore(app);
-
-    document.addEventListener('DOMContentLoaded', () => {
+  <script src="script.js"></script>
+  <script>
+    let reviewsLoaded = false;
+    
+    document.addEventListener('DOMContentLoaded', function() {
       loadGallerySlider();
-      loadReviewsPreview();
+      
+      const reviewsSection = document.getElementById('customer-reviews');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !reviewsLoaded) {
+            reviewsLoaded = true;
+            loadHomeReviews();
+            observer.unobserve(entry.target);
+          }
+        });
+      });
+      if (reviewsSection) observer.observe(reviewsSection);
     });
 
     async function loadGallerySlider() {
       try {
-        const q = query(collection(db, "gallery"), orderBy("createdAt", "desc"), limit(6));
-        const snapshot = await getDocs(q);
+        const galleryItems = await window.loadGalleryImages();
+        const gallerySlider = document.getElementById('gallery-slider');
         
-        const slider = document.getElementById('gallery-slider');
-        slider.innerHTML = '';
+        if (!gallerySlider) return;
         
-        if (snapshot.empty) {
-          slider.innerHTML = `
-            <div class="no-gallery">
-              <p>갤러리가 비어있습니다.</p>
+        gallerySlider.innerHTML = '';
+        
+        if (galleryItems.length === 0) {
+          gallerySlider.innerHTML = `
+            <div class="gallery-card">
+              <div style="padding: 2rem; text-align: center; color: #666;">
+                <p>갤러리 이미지가 없습니다.</p>
+              </div>
             </div>
           `;
           return;
         }
         
-        snapshot.forEach(doc => {
-          const data = doc.data();
+        galleryItems.slice(0, 5).forEach((item, index) => {
           const card = document.createElement('div');
           card.className = 'gallery-card';
+          card.style.animationDelay = `${index * 0.1}s`;
           
           card.innerHTML = `
-            <img src="${data.imageUrl}" alt="${data.caption || 'nail art'}" loading="lazy">
+            <img src="${item.image_url}" alt="nail art ${index + 1}" loading="lazy">
             <div class="info">
-              <h4>${data.caption || '네일 디자인'}</h4>
+              <h4>${item.caption || `네일 아트 ${index + 1}`}</h4>
             </div>
           `;
           
-          card.addEventListener('click', () => {
-            openModal(data.imageUrl, data.caption || '네일 디자인');
-          });
-          
-          slider.appendChild(card);
+          gallerySlider.appendChild(card);
         });
         
       } catch (error) {
-        console.error('갤러리 로드 실패:', error);
-        document.getElementById('gallery-slider').innerHTML = `
-          <div class="error-gallery">
-            <p>갤러리 로드에 실패했습니다.</p>
-          </div>
-        `;
+        console.error('갤러리 슬라이더 로드 실패:', error);
+        const gallerySlider = document.getElementById('gallery-slider');
+        if (gallerySlider) {
+          gallerySlider.innerHTML = `
+            <div class="gallery-card">
+              <div style="padding: 2rem; text-align: center; color: #666;">
+                <p>갤러리 로드에 실패했습니다.</p>
+              </div>
+            </div>
+          `;
+        }
       }
     }
 
-    async function loadReviewsPreview() {
+    async function loadHomeReviews() {
       try {
-        const q = query(collection(db, "reviews"), orderBy("createdAt", "desc"), limit(3));
-        const snapshot = await getDocs(q);
+        const reviews = await window.loadReviews('newest', 3);
+        const reviewsContainer = document.getElementById('reviews-container');
         
-        const container = document.getElementById('reviews-container');
-        container.innerHTML = '';
+        if (!reviewsContainer) return;
         
-        if (snapshot.empty) {
-          container.innerHTML = `
+        reviewsContainer.innerHTML = '';
+        
+        if (reviews.length === 0) {
+          reviewsContainer.innerHTML = `
             <div class="no-reviews">
-              <p>아직 등록된 후기가 없습니다.</p>
-              <p>첫 번째 후기를 남겨보세요! ✨</p>
+              <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #4a5568;">아직 등록된 후기가 없습니다.</p>
+              <p style="font-size: 1rem; color: hotpink;">첫 번째 후기를 남겨보세요! ✨</p>
             </div>
           `;
           return;
         }
         
-        snapshot.forEach(doc => {
-          const data = doc.data();
+        reviews.forEach((data, index) => {
           const reviewCard = document.createElement('div');
           reviewCard.className = 'review-preview';
+          reviewCard.style.animationDelay = `${index * 0.1}s`;
           
-          const createdAt = data.createdAt?.toDate() || new Date();
+          const createdAt = new Date(data.created_at);
           const dateString = createdAt.toLocaleDateString('ko-KR');
-          const stars = '⭐'.repeat(data.rating || 5);
+          
+          const rating = data.rating || 5;
+          const starsDisplay = '⭐'.repeat(rating);
+          
+          const imageHtml = data.image_url ? 
+            `<div class="review-image">
+               <img src="${data.image_url}" alt="후기 사진" style="
+                 width: 80px; 
+                 height: 80px; 
+                 object-fit: cover; 
+                 border-radius: 8px; 
+                 float: left; 
+                 margin-right: 1rem;
+                 box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+               " loading="lazy" />
+             </div>` : '';
           
           reviewCard.innerHTML = `
-            <div class="stars">${stars}</div>
-            <p class="review-text">"${data.content}"</p>
-            <cite class="review-author">- ${data.name} (${dateString})</cite>
+            ${imageHtml}
+            <div class="stars">${starsDisplay}</div>
+            <p style="line-height: 1.6; margin: 0.5rem 0; color: #333; font-size: 1rem;">"${data.content}"</p>
+            <cite style="clear: both; display: block; margin-top: 1rem; font-style: normal; color: #666; font-weight: 500; font-size: 0.9rem;">- ${data.name} (${dateString})</cite>
           `;
           
-          container.appendChild(reviewCard);
+          reviewsContainer.appendChild(reviewCard);
         });
         
       } catch (error) {
         console.error('후기 로드 실패:', error);
-        document.getElementById('reviews-container').innerHTML = `
+        displayErrorMessage();
+      }
+    }
+
+    function displayErrorMessage() {
+      const container = document.getElementById('reviews-container');
+      if (container) {
+        container.innerHTML = `
           <div class="error-message">
-            <p>후기를 불러오는데 실패했습니다.</p>
+            <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; color: #dc2626;">후기를 불러오는데 실패했습니다.</p>
+            <p style="color: #666;">잠시 후 다시 시도해주세요.</p>
           </div>
         `;
       }
     }
 
-    function openModal(imageUrl, caption) {
-      const modal = document.createElement('div');
-      modal.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.8); display: flex; align-items: center;
-        justify-content: center; z-index: 10000; cursor: pointer;
-      `;
-      
-      modal.innerHTML = `
-        <div style="position: relative; max-width: 90vw; max-height: 90vh; background: white; border-radius: 10px; overflow: hidden;">
-          <span style="position: absolute; top: 10px; right: 15px; font-size: 2rem; color: white; cursor: pointer; background: rgba(0,0,0,0.5); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">&times;</span>
-          <img src="${imageUrl}" style="max-width: 100%; max-height: 80vh; display: block;" />
-          <div style="padding: 1rem; text-align: center; font-weight: 600; color: #333;">${caption}</div>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-      
-      modal.querySelector('span').onclick = () => modal.remove();
-      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') modal.remove(); });
-    }
-
     const style = document.createElement('style');
     style.textContent = `
-      .loading-spinner {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 3px solid #f3f3f3;
-        border-top: 3px solid hotpink;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
-      
-      .intro-section {
-        padding: 2rem 2rem 0;
-        text-align: center;
-      }
-      
-      .intro-content h2 {
-        font-size: 2.5rem;
-        color: #333;
-        margin-bottom: 0.5rem;
-      }
-      
-      .intro-content h3 {
-        font-size: 1.3rem;
-        color: #666;
-        margin-bottom: 1rem;
-        font-weight: 400;
-      }
-      
-      .loading-slider, .no-gallery, .error-gallery {
-        text-align: center;
-        padding: 3rem 2rem;
-        color: #666;
-      }
-      
       .review-preview {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 15px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        text-align: center;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.6s ease forwards;
       }
-      
-      .review-preview .stars {
-        margin-bottom: 1rem;
-        font-size: 1.2rem;
-      }
-      
-      .review-text {
-        font-style: italic;
-        color: #333;
-        margin-bottom: 1rem;
-        line-height: 1.5;
-      }
-      
-      .review-author {
-        color: #666;
-        font-size: 0.9rem;
-      }
-      
-      .no-reviews, .error-message {
-        text-align: center;
-        padding: 2rem;
-        color: #666;
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        grid-column: 1 / -1;
-      }
-      
-      @media (max-width: 768px) {
-        .intro-content h2 {
-          font-size: 2rem;
-        }
-        
-        .intro-content h3 {
-          font-size: 1.1rem;
+      .review-preview:nth-child(2) { animation-delay: 0.1s; }
+      .review-preview:nth-child(3) { animation-delay: 0.2s; }
+      @keyframes fadeInUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
       }
     `;

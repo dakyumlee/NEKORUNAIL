@@ -603,6 +603,7 @@
       }
       if (form) form.addEventListener("submit", handleFormSubmit);
     });
+    
     async function checkTimeSlotAvailable(date, time) {
       const key = `${date}-${time}`;
       if (timeSlotCache.has(key)) return timeSlotCache.get(key);
@@ -612,6 +613,7 @@
       setTimeout(() => timeSlotCache.delete(key), 60000);
       return ok;
     }
+    
     async function updateAvailableTimeSlots(d) {
       if (!d) return;
       const booked = (await window.loadBookings(d))
@@ -642,6 +644,7 @@
         }
       });
     }
+    
     async function handleFormSubmit(e) {
       e.preventDefault();
       const n = document.getElementById("name").value.trim();
@@ -652,7 +655,7 @@
       const sv = Array.from(document.querySelectorAll('input[name="services"]:checked')).map(i => i.value);
       const notes = document.getElementById("notes").value.trim();
       if (!n || !p || !d || !t) {
-        showNotification("모든 필수 정보를 입력해주세요.","error");
+        window.showNotification("모든 필수 정보를 입력해주세요.","error");
         return;
       }
       const btn = document.getElementById("submit-btn");
@@ -663,7 +666,7 @@
       btn.disabled = true;
       try {
         if (!await checkTimeSlotAvailable(d, t)) {
-          showNotification("해당 시간 이미 예약이 있습니다.","warning");
+          window.showNotification("해당 시간 이미 예약이 있습니다.","warning");
           await updateAvailableTimeSlots(d);
           return;
         }
@@ -676,13 +679,13 @@
           notes,
           status: "pending"
         });
-        showNotification("✅ 예약 완료!","success");
+        window.showNotification("✅ 예약 완료!","success");
         document.getElementById("reserve-form").reset();
         timeSlotCache.clear();
         await updateAvailableTimeSlots(d);
       } catch (err) {
         console.error(err);
-        showNotification("예약 처리 중 오류 발생","error");
+        window.showNotification("예약 처리 중 오류 발생","error");
       } finally {
         txt.style.display = "inline";
         spin.style.display = "none";

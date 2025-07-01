@@ -247,6 +247,7 @@
       const btn = document.getElementById("load-more-btn");
       if (btn) btn.addEventListener("click", () => loadGallery());
     });
+    
     async function loadGallery() {
       if (isLoading) return;
       isLoading = true;
@@ -254,12 +255,19 @@
       container.innerHTML = `<div class="loading-gallery"><div class="loading-spinner"></div><p>갤러리를 불러오는 중...</p></div>`;
       try {
         const items = await window.loadGalleryImages();
-        container.innerHTML = items.map(item => `
-          <div class="gallery-card">
-            <img src="${item.imageUrl}" alt="${item.caption||''}" />
-            ${ item.caption ? `<div class="info"><h4>${item.caption}</h4></div>` : '' }
+        
+        if (items.length === 0) {
+          container.innerHTML = `<div class="no-gallery"><div>🖼️</div><h3>갤러리가 비어있습니다</h3><p>아직 업로드된 이미지가 없습니다.</p></div>`;
+          return;
+        }
+        
+        container.innerHTML = items.map((item, index) => `
+          <div class="gallery-card" style="animation-delay: ${index * 0.1}s" onclick="openImageModal('${item.image_url}', '${item.caption || ''}')">
+            <img src="${item.image_url}" alt="${item.caption || ''}" loading="lazy" />
+            ${item.caption ? `<div class="info"><h4>${item.caption}</h4></div>` : ''}
           </div>
         `).join("");
+        
         const loadMore = document.getElementById("load-more-btn");
         if (loadMore) loadMore.style.display = "none";
       } catch (err) {
@@ -269,14 +277,32 @@
         isLoading = false;
       }
     }
-    async function handleUpload() {
-      const input = document.getElementById("fileInput");
-      if (!input.files[0]) return;
-      await window.uploadGalleryImage(input.files[0]);
-      loadGallery();
-    }
-    const upBtn = document.getElementById("uploadBtn");
-    if (upBtn) upBtn.addEventListener("click", handleUpload);
+
+    window.openImageModal = function(imageUrl, caption) {
+      const modal = document.createElement('div');
+      modal.className = 'image-modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <span class="close-modal">&times;</span>
+          <img src="${imageUrl}" alt="${caption}" />
+          ${caption ? `<div class="modal-caption">${caption}</div>` : ''}
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      modal.querySelector('.close-modal').onclick = () => modal.remove();
+      modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+      };
+      
+      document.addEventListener('keydown', function escHandler(e) {
+        if (e.key === 'Escape') {
+          modal.remove();
+          document.removeEventListener('keydown', escHandler);
+        }
+      });
+    };
   </script>
 </body>
 </html>
