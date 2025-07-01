@@ -741,10 +741,43 @@
       
       reviewsList.innerHTML = '';
       
-      if (reviewsData.length === 0) {
+      if (!reviewsData || !Array.isArray(reviewsData) || reviewsData.length === 0) {
           reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">후기가 없습니다.</div>';
           return;
       }
+      
+      reviewsData.forEach(data => {
+          if (!data || !data.id) return;
+          
+          const card = document.createElement('div');
+          card.className = 'admin-review-card';
+          
+          const createdAt = data.created_at ? new Date(data.created_at) : new Date();
+          const dateString = createdAt.toLocaleDateString('ko-KR');
+          
+          const rating = data.rating || 5;
+          const starsDisplay = '⭐'.repeat(Math.max(1, Math.min(5, rating)));
+          
+          const imageHtml = data.image_url ? 
+              `<div style="text-align: center; margin-top: 1rem;">
+                 <img src="${data.image_url}" alt="후기 사진" style="max-width: 200px; max-height: 150px; border-radius: 8px;" loading="lazy" />
+               </div>` : '';
+          
+          card.innerHTML = `
+              <div class="review-header">
+                  <span class="review-author">${data.name || '익명'}</span>
+                  <span class="review-date">${dateString}</span>
+              </div>
+              <div style="margin: 1rem 0; font-size: 1.2rem;">${starsDisplay}</div>
+              <div class="review-content">${data.content || ''}</div>
+              ${imageHtml}
+              <div class="review-actions">
+                  <button class="delete-btn" onclick="deleteReview('${data.id}', '${data.image_url || ''}')">삭제</button>
+              </div>
+          `;
+          reviewsList.appendChild(card);
+      });
+    }
       
       reviewsData.forEach(data => {
           const card = document.createElement('div');
@@ -775,7 +808,6 @@
           `;
           reviewsList.appendChild(card);
       });
-    }
 
     async function handleFileUpload(e) {
       e.preventDefault();

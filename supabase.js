@@ -32,7 +32,9 @@ window.loadBookings = async (date = null) => {
       console.error('Booking load error:', error);
       return [];
     }
-    return data || [];
+    
+    console.log('예약 데이터:', data);
+    return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error('예약 로드 실패:', error);
     return [];
@@ -73,7 +75,9 @@ window.loadGalleryImages = async () => {
       console.error('Gallery load error:', error);
       return [];
     }
-    return data || [];
+    
+    console.log('갤러리 데이터:', data);
+    return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error('갤러리 로드 실패:', error);
     return [];
@@ -104,6 +108,7 @@ window.addGalleryImage = async (imageData) => {
 
 window.loadReviews = async (sortBy = 'newest', limit = null) => {
   try {
+    console.log('리뷰 로드 시작:', { sortBy, limit });
     const client = await initSupabase();
     let query = client.from('reviews').select('*');
     
@@ -125,16 +130,17 @@ window.loadReviews = async (sortBy = 'newest', limit = null) => {
       query = query.limit(limit);
     }
     
-    console.log('리뷰 쿼리 실행 중...');
     const { data, error } = await query;
     
     if (error) {
-      console.error('Reviews load error details:', error);
+      console.error('Reviews load error:', error);
       return [];
     }
     
-    console.log('로드된 리뷰 데이터:', data);
-    return data || [];
+    console.log('리뷰 데이터:', data);
+    const result = Array.isArray(data) ? data : [];
+    console.log('반환할 리뷰 배열:', result, '길이:', result.length);
+    return result;
   } catch (error) {
     console.error('리뷰 로드 실패:', error);
     return [];
@@ -149,7 +155,7 @@ window.addReview = async (reviewData) => {
       name: String(reviewData.name || '익명'),
       content: String(reviewData.content || ''),
       rating: parseInt(reviewData.rating) || 5,
-      image_url: reviewData.image_url || '',
+      image_url: reviewData.image_url || null,
       created_at: new Date().toISOString()
     };
     
@@ -161,7 +167,7 @@ window.addReview = async (reviewData) => {
       .select();
     
     if (error) {
-      console.error('Review add error details:', error);
+      console.error('Review add error:', error);
       throw new Error(`리뷰 추가 실패: ${error.message}`);
     }
     
@@ -213,6 +219,8 @@ window.updateBookingStatus = async (id, status) => {
 };
 
 window.showNotification = function(message, type = 'success') {
+  console.log('알림:', message, type);
+  
   const existing = document.querySelector('.notification');
   if (existing) existing.remove();
   
@@ -260,6 +268,10 @@ window.showNotification = function(message, type = 'success') {
   });
 };
 
-initSupabase().catch(console.error);
+initSupabase().then(() => {
+  console.log('Supabase 준비 완료');
+}).catch(error => {
+  console.error('Supabase 초기화 오류:', error);
+});
 
-console.log('✅ Supabase 클라이언트 로드 완료');
+console.log('Supabase 클라이언트 로드 완료');
