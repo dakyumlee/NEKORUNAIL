@@ -235,6 +235,7 @@
         let imageUrl = null;
         const file = document.getElementById("review-image").files[0];
         if(file){
+          
           const reader = new FileReader();
           imageUrl = await new Promise((resolve) => {
             reader.onload = (e) => resolve(e.target.result);
@@ -267,7 +268,9 @@
     async function loadReviews(reset) {
       if(isLoading) return; 
       isLoading=true;
-      const cont = document.getElementById("reviews-container"), btn = document.getElementById("load-more-btn");
+      const cont = document.getElementById("reviews-container");
+      const btn = document.getElementById("load-more-btn");
+      
       if(reset) { 
         cont.innerHTML='<div class="loading-reviews"><p>로딩 중…</p></div>'; 
         currentPage = 0; 
@@ -275,12 +278,14 @@
       }
       
       try {
+        console.log('리뷰 로딩 시작...');
         const sort = document.getElementById("review-sort").value;
         const reviews = await window.loadReviews(sort);
+        console.log('로드된 리뷰:', reviews);
         
         if(reset) {
           cont.innerHTML='';
-          allReviews = reviews || [];
+          allReviews = Array.isArray(reviews) ? reviews : [];
         }
         
         if(allReviews.length === 0 && reset){
@@ -293,18 +298,26 @@
         const startIndex = currentPage * REVIEWS_PER_PAGE;
         const endIndex = startIndex + REVIEWS_PER_PAGE;
         const reviewsToShow = allReviews.slice(startIndex, endIndex);
+        console.log('표시할 리뷰:', reviewsToShow);
         
         reviewsToShow.forEach(d => {
-          if (!d || !d.id) return;
+          if (!d || !d.id) {
+            console.log('잘못된 리뷰 데이터:', d);
+            return;
+          }
           
           const date = d.created_at ? new Date(d.created_at).toLocaleDateString('ko-KR') : '';
-          const rating = d.rating || 5;
+          const rating = Math.max(1, Math.min(5, parseInt(d.rating) || 5));
           const stars = '⭐'.repeat(rating) + '☆'.repeat(5-rating);
-          const imgHtml = d.image_url ? `<div class="review-image-container"><img src="${d.image_url}" class="review-image" onclick="openImageModal('${d.image_url}','${d.name || ''}님의 후기')" /></div>` : '';
-          const box=document.createElement('div'); 
-          box.className='review-box';
-          box.innerHTML=`
-            <div class="review-header"><strong class="review-author">${d.name || '익명'}</strong><span class="review-date">${date}</span></div>
+          const imgHtml = d.image_url ? `<div class="review-image-container"><img src="${d.image_url}" class="review-image" onclick="openImageModal('${d.image_url}','${(d.name || '익명')}님의 후기')" /></div>` : '';
+          
+          const box = document.createElement('div'); 
+          box.className = 'review-box';
+          box.innerHTML = `
+            <div class="review-header">
+              <strong class="review-author">${d.name || '익명'}</strong>
+              <span class="review-date">${date}</span>
+            </div>
             <div class="review-rating">${stars}</div>
             <div class="review-content">${d.content || ''}</div>
             ${imgHtml}
@@ -314,11 +327,14 @@
         
         currentPage++;
         btn.style.display = endIndex < allReviews.length ? 'block' : 'none';
+        console.log('리뷰 로딩 완료');
       } catch(error) {
         console.error('리뷰 로드 실패:', error);
-        if(reset) cont.innerHTML='<div class="error-message"><p>리뷰 로드에 실패했습니다.</p></div>';
+        if(reset) {
+          cont.innerHTML='<div class="error-message"><p>리뷰 로드에 실패했습니다.</p><p>오류: ' + error.message + '</p></div>';
+        }
       }
-      isLoading=false;
+      isLoading = false;
     }
 
     window.openImageModal = (url,cap) => {
