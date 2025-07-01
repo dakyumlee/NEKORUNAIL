@@ -219,7 +219,10 @@
     function initializeReviewFlow() {
       document.getElementById("review-sort").addEventListener("change", () => loadReviews());
       document.getElementById("review-form").addEventListener("submit", async e => { e.preventDefault(); await submitReview(); });
-      loadReviews();
+      
+      setTimeout(() => {
+        loadReviews();
+      }, 2000);
     }
 
     async function submitReview() {
@@ -271,18 +274,49 @@
       cont.innerHTML='<div class="loading-reviews"><p>로딩 중…</p></div>'; 
       
       try {
-        console.log('리뷰 로딩 시작...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         const sort = document.getElementById("review-sort").value;
         const reviews = await window.loadReviews(sort, 100);
-        console.log('받은 리뷰 데이터:', reviews);
         
         cont.innerHTML='';
         
-        if(!Array.isArray(reviews) || reviews.length === 0){
+        if(!reviews || !Array.isArray(reviews) || reviews.length === 0){
           cont.innerHTML='<div class="no-reviews"><p>등록된 후기가 없습니다.</p><p>첫 후기를 남겨보세요!</p></div>';
           isLoading = false;
           return;
         }
+        
+        reviews.forEach(d => {
+          if (!d) return;
+          
+          const date = d.created_at ? new Date(d.created_at).toLocaleDateString('ko-KR') : '';
+          const rating = Math.max(1, Math.min(5, parseInt(d.rating) || 5));
+          const stars = '⭐'.repeat(rating);
+          const imgHtml = d.image_url ? 
+            `<div class="review-image-container">
+               <img src="${d.image_url}" class="review-image" onclick="openImageModal('${d.image_url}','${(d.name || '익명')}님의 후기')" />
+             </div>` : '';
+          
+          const box = document.createElement('div'); 
+          box.className = 'review-box';
+          box.innerHTML = `
+            <div class="review-header">
+              <strong class="review-author">${d.name || '익명'}</strong>
+              <span class="review-date">${date}</span>
+            </div>
+            <div class="review-rating">${stars}</div>
+            <div class="review-content">${d.content || ''}</div>
+            ${imgHtml}
+          `;
+          cont.appendChild(box);
+        });
+        
+      } catch(error) {
+        cont.innerHTML='<div class="error-message"><p>리뷰 로드에 실패했습니다.</p></div>';
+      }
+      isLoading = false;
+    }
         
         reviews.forEach((d, index) => {
           if (!d || !d.id) {
