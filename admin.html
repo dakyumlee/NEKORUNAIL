@@ -566,19 +566,36 @@
 
           await loadFirebase();
           
-          const [bookingsSnapshot, gallerySnapshot, reviewsSnapshot] = await Promise.all([
-              window.fbGetDocs(window.fbCollection(db, "bookings")),
-              window.fbGetDocs(window.fbCollection(db, "gallery")),
-              window.fbGetDocs(window.fbCollection(db, "reviews"))
-          ]);
+          console.log('대시보드 데이터 로드 시작...');
           
+          // 각각 개별적으로 로드하여 어떤 것이 실패하는지 확인
           const bookingsData = [];
           const galleryData = [];
           const reviewsData = [];
           
-          bookingsSnapshot.forEach(doc => bookingsData.push({ id: doc.id, ...doc.data() }));
-          gallerySnapshot.forEach(doc => galleryData.push({ id: doc.id, ...doc.data() }));
-          reviewsSnapshot.forEach(doc => reviewsData.push({ id: doc.id, ...doc.data() }));
+          try {
+              const bookingsSnapshot = await window.fbGetDocs(window.fbCollection(db, "bookings"));
+              bookingsSnapshot.forEach(doc => bookingsData.push({ id: doc.id, ...doc.data() }));
+              console.log('예약 데이터 로드 성공:', bookingsData.length);
+          } catch (bookingError) {
+              console.error('예약 데이터 로드 실패:', bookingError);
+          }
+          
+          try {
+              const gallerySnapshot = await window.fbGetDocs(window.fbCollection(db, "gallery"));
+              gallerySnapshot.forEach(doc => galleryData.push({ id: doc.id, ...doc.data() }));
+              console.log('갤러리 데이터 로드 성공:', galleryData.length);
+          } catch (galleryError) {
+              console.error('갤러리 데이터 로드 실패:', galleryError);
+          }
+          
+          try {
+              const reviewsSnapshot = await window.fbGetDocs(window.fbCollection(db, "reviews"));
+              reviewsSnapshot.forEach(doc => reviewsData.push({ id: doc.id, ...doc.data() }));
+              console.log('리뷰 데이터 로드 성공:', reviewsData.length);
+          } catch (reviewError) {
+              console.error('리뷰 데이터 로드 실패:', reviewError);
+          }
           
           setCachedData('bookings', bookingsData);
           setCachedData('gallery', galleryData);
@@ -587,10 +604,10 @@
           updateDashboardStats(bookingsData, galleryData, reviewsData);
           loadRecentBookings(bookingsData);
           
-          showNotification('📊 Firebase 데이터로 업데이트됨!', 'success');
+          showNotification('📊 데이터 로드 완료!', 'success');
       } catch (error) {
           console.error('대시보드 로드 실패:', error);
-          showNotification('대시보드 로드 실패', 'error');
+          showNotification('대시보드 로드 실패: ' + error.message, 'error');
       }
     }
 
@@ -744,18 +761,25 @@
       if (!galleryList) return;
       
       try {
+          galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">갤러리를 불러오는 중...</div>';
+          
           let galleryData = getCachedData('gallery');
           
           if (!galleryData) {
               await loadFirebase();
-              const q = window.fbQuery(window.fbCollection(db, "gallery"), window.fbOrderBy("createdAt", "desc"));
-              const snapshot = await window.fbGetDocs(q);
+              
+              // 간단한 쿼리로 시작
+              console.log('갤러리 데이터 로드 시작...');
+              const galleryCollection = window.fbCollection(db, "gallery");
+              const snapshot = await window.fbGetDocs(galleryCollection);
               
               galleryData = [];
               snapshot.forEach(doc => {
+                  console.log('갤러리 문서:', doc.id, doc.data());
                   galleryData.push({ id: doc.id, ...doc.data() });
               });
               
+              console.log('로드된 갤러리 데이터:', galleryData);
               setCachedData('gallery', galleryData);
           }
           
@@ -763,7 +787,13 @@
           
       } catch (error) {
           console.error('갤러리 로드 실패:', error);
-          galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
+          galleryList.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #ef4444;">
+              <h3>갤러리 로드 실패</h3>
+              <p>오류: ${error.message}</p>
+              <button onclick="loadGallery()" style="background: hotpink; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer;">다시 시도</button>
+            </div>
+          `;
       }
     }
 
