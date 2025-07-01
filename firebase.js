@@ -1,12 +1,3 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-import {
-  getFirestore, collection, query,
-  where, getDocs, addDoc, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-import {
-  getStorage, ref, uploadBytes, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js";
-
 const firebaseConfig = {
   apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
   authDomain: "nekorunail.firebaseapp.com",
@@ -17,11 +8,37 @@ const firebaseConfig = {
   measurementId: "G-MW8CBHGSLG"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const storage = getStorage(app);
+async function initializeFirebase() {
+  try {
+    const [
+      { initializeApp },
+      { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp },
+      { getStorage, ref, uploadBytes, getDownloadURL }
+    ] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js")
+    ]);
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    return { db, storage, collection, query, where, getDocs, addDoc, serverTimestamp, ref, uploadBytes, getDownloadURL };
+  } catch (error) {
+    console.error('Firebase 초기화 실패:', error);
+    throw error;
+  }
+}
+
+let firebaseApp = null;
 
 window.loadBookings = async (date = null) => {
+  if (!firebaseApp) {
+    firebaseApp = await initializeFirebase();
+  }
+  
+  const { db, collection, query, where, getDocs } = firebaseApp;
   const q = date
     ? query(collection(db, "bookings"), where("date", "==", date))
     : query(collection(db, "bookings"));
@@ -29,17 +46,34 @@ window.loadBookings = async (date = null) => {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
-window.addBooking = data => addDoc(collection(db, "bookings"), {
-  ...data,
-  createdAt: serverTimestamp()
-});
+window.addBooking = async (data) => {
+  if (!firebaseApp) {
+    firebaseApp = await initializeFirebase();
+  }
+  
+  const { db, collection, addDoc, serverTimestamp } = firebaseApp;
+  return await addDoc(collection(db, "bookings"), {
+    ...data,
+    createdAt: serverTimestamp()
+  });
+};
 
 window.loadGalleryImages = async () => {
+  if (!firebaseApp) {
+    firebaseApp = await initializeFirebase();
+  }
+  
+  const { db, collection, getDocs } = firebaseApp;
   const snap = await getDocs(collection(db, "gallery"));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
-window.uploadGalleryImage = async file => {
+window.uploadGalleryImage = async (file) => {
+  if (!firebaseApp) {
+    firebaseApp = await initializeFirebase();
+  }
+  
+  const { db, storage, collection, addDoc, serverTimestamp, ref, uploadBytes, getDownloadURL } = firebaseApp;
   const imgRef = ref(storage, `gallery/${Date.now()}_${file.name}`);
   await uploadBytes(imgRef, file);
   const url = await getDownloadURL(imgRef);
