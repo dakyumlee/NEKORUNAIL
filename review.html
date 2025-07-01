@@ -235,25 +235,33 @@
         let imageUrl = null;
         const file = document.getElementById("review-image").files[0];
         if(file){
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('upload_preset', 'nekorunail');
-          
-          const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/ddlkhq98s/image/upload', {
-            method: 'POST',
-            body: formData
+          const reader = new FileReader();
+          imageUrl = await new Promise((resolve) => {
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
           });
-          
-          const cloudinaryData = await cloudinaryResponse.json();
-          imageUrl = cloudinaryData.secure_url;
         }
-        await window.addReview({ name, content, rating:selectedRating, image_url: imageUrl });
+        await window.addReview({ 
+          name, 
+          content, 
+          rating: selectedRating, 
+          image_url: imageUrl 
+        });
         window.showNotification("후기 등록 완료!", "success");
         document.getElementById("review-form").reset();
-        selectedRating=0; updateStars(document.querySelectorAll('.star'),0); updateRatingText(document.querySelector('.rating-text'),0);
+        document.getElementById("image-preview").style.display = 'none';
+        selectedRating=0; 
+        updateStars(document.querySelectorAll('.star'),0); 
+        updateRatingText(document.querySelector('.rating-text'),0);
         loadReviews(true);
-      } catch(err){ console.error(err); window.showNotification("등록 실패", "error"); }
-      finally{ txt.style.display='inline'; spin.style.display='none'; btn.disabled=false; }
+      } catch(err){ 
+        console.error(err); 
+        window.showNotification("등록 실패", "error"); 
+      } finally{ 
+        txt.style.display='inline'; 
+        spin.style.display='none'; 
+        btn.disabled=false; 
+      }
     }
 
     async function loadReviews(reset) {
@@ -272,7 +280,7 @@
         
         if(reset) {
           cont.innerHTML='';
-          allReviews = reviews;
+          allReviews = reviews || [];
         }
         
         if(allReviews.length === 0 && reset){
@@ -287,14 +295,18 @@
         const reviewsToShow = allReviews.slice(startIndex, endIndex);
         
         reviewsToShow.forEach(d => {
-          const date = new Date(d.created_at).toLocaleDateString('ko-KR');
-          const stars = '⭐'.repeat(d.rating) + '☆'.repeat(5-d.rating);
-          const imgHtml = d.image_url?`<div class="review-image-container"><img src="${d.image_url}" class="review-image" onclick="openImageModal('${d.image_url}','${d.name}님의 후기')" /></div>`:'';
-          const box=document.createElement('div'); box.className='review-box';
+          if (!d || !d.id) return;
+          
+          const date = d.created_at ? new Date(d.created_at).toLocaleDateString('ko-KR') : '';
+          const rating = d.rating || 5;
+          const stars = '⭐'.repeat(rating) + '☆'.repeat(5-rating);
+          const imgHtml = d.image_url ? `<div class="review-image-container"><img src="${d.image_url}" class="review-image" onclick="openImageModal('${d.image_url}','${d.name || ''}님의 후기')" /></div>` : '';
+          const box=document.createElement('div'); 
+          box.className='review-box';
           box.innerHTML=`
-            <div class="review-header"><strong class="review-author">${d.name}</strong><span class="review-date">${date}</span></div>
+            <div class="review-header"><strong class="review-author">${d.name || '익명'}</strong><span class="review-date">${date}</span></div>
             <div class="review-rating">${stars}</div>
-            <div class="review-content">${d.content}</div>
+            <div class="review-content">${d.content || ''}</div>
             ${imgHtml}
           `;
           cont.appendChild(box);
