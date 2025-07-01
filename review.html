@@ -220,6 +220,27 @@
       document.getElementById("review-sort").addEventListener("change", () => loadReviews(true));
       document.getElementById("load-more-btn").addEventListener("click", () => loadReviews(false));
       document.getElementById("review-form").addEventListener("submit", async e => { e.preventDefault(); await submitReview(); });
+      
+      // 테스트용 리뷰 추가 버튼
+      const testBtn = document.createElement('button');
+      testBtn.textContent = '테스트 리뷰 추가';
+      testBtn.style.cssText = 'margin: 10px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px;';
+      testBtn.onclick = async () => {
+        try {
+          await window.addReview({
+            name: '테스트 사용자',
+            content: '테스트 리뷰입니다. 매우 만족합니다!',
+            rating: 5,
+            image_url: null
+          });
+          console.log('테스트 리뷰 추가 완료');
+          loadReviews(true);
+        } catch (error) {
+          console.error('테스트 리뷰 추가 실패:', error);
+        }
+      };
+      document.querySelector('.reviews-controls').appendChild(testBtn);
+      
       loadReviews(true);
     }
 
@@ -235,7 +256,7 @@
         let imageUrl = null;
         const file = document.getElementById("review-image").files[0];
         if(file){
-          
+          // base64로 변환해서 저장 (임시)
           const reader = new FileReader();
           imageUrl = await new Promise((resolve) => {
             reader.onload = (e) => resolve(e.target.result);
