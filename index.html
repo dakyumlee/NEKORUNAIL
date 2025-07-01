@@ -56,27 +56,85 @@
   </footer>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    console.log('🔥 Firebase 연결 시작...');
 
-    const app = initializeApp({
-      apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
-      authDomain: "nekorunail.firebaseapp.com",
-      projectId: "nekorunail",
-    });
-    const db = getFirestore(app);
+    let db = null;
+    let connectionRetryCount = 0;
+    const MAX_RETRIES = 3;
 
-    document.addEventListener('DOMContentLoaded', () => {
-      loadGallerySlider();
-      loadReviewsPreview();
-    });
-
-    async function loadGallerySlider() {
+    async function initializeFirebase() {
       try {
+        const { initializeApp } = await import("https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js");
+        const { getFirestore, connectFirestoreEmulator, collection, getDocs, query, orderBy, limit } = await import("https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js");
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
+          authDomain: "nekorunail.firebaseapp.com",
+          projectId: "nekorunail",
+          storageBucket: "nekorunail.appspot.com",
+          messagingSenderId: "571846382457",
+          appId: "1:571846382457:web:6c0f66ca63163473fd15a8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        
+        try {
+          db = getFirestore(app);
+          console.log('✅ Firebase 초기화 성공');
+          return { collection, getDocs, query, orderBy, limit };
+        } catch (firestoreError) {
+          console.error('Firestore 초기화 실패:', firestoreError);
+          throw firestoreError;
+        }
+
+      } catch (error) {
+        console.error('Firebase 초기화 실패:', error);
+        connectionRetryCount++;
+        
+        if (connectionRetryCount < MAX_RETRIES) {
+          console.log(`재시도 중... (${connectionRetryCount}/${MAX_RETRIES})`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return initializeFirebase();
+        }
+        
+        throw error;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await loadContent();
+      } catch (error) {
+        console.error('컨텐츠 로드 실패:', error);
+        showOfflineContent();
+      }
+    });
+
+    async function loadContent() {
+      try {
+        const firebaseModules = await initializeFirebase();
+        await Promise.all([
+          loadGallerySlider(firebaseModules),
+          loadReviewsPreview(firebaseModules)
+        ]);
+      } catch (error) {
+        console.error('Firebase 컨텐츠 로드 실패:', error);
+        showOfflineContent();
+      }
+    }
+
+    async function loadGallerySlider(firebaseModules) {
+      const slider = document.getElementById('gallery-slider');
+      
+      try {
+        if (!db || !firebaseModules) {
+          throw new Error('Firebase not initialized');
+        }
+
+        const { collection, getDocs, query, orderBy, limit } = firebaseModules;
         const q = query(collection(db, "gallery"), orderBy("createdAt", "desc"), limit(6));
         const snapshot = await getDocs(q);
         
-        const slider = document.getElementById('gallery-slider');
         slider.innerHTML = '';
         
         if (snapshot.empty) {
@@ -107,22 +165,31 @@
           slider.appendChild(card);
         });
         
+        console.log('✅ 갤러리 로드 성공');
+        
       } catch (error) {
         console.error('갤러리 로드 실패:', error);
-        document.getElementById('gallery-slider').innerHTML = `
+        slider.innerHTML = `
           <div class="error-gallery">
-            <p>갤러리 로드에 실패했습니다.</p>
+            <p>갤러리를 불러올 수 없습니다.</p>
+            <button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: hotpink; color: white; border: none; border-radius: 5px; cursor: pointer;">새로고침</button>
           </div>
         `;
       }
     }
 
-    async function loadReviewsPreview() {
+    async function loadReviewsPreview(firebaseModules) {
+      const container = document.getElementById('reviews-container');
+      
       try {
+        if (!db || !firebaseModules) {
+          throw new Error('Firebase not initialized');
+        }
+
+        const { collection, getDocs, query, orderBy, limit } = firebaseModules;
         const q = query(collection(db, "reviews"), orderBy("createdAt", "desc"), limit(3));
         const snapshot = await getDocs(q);
         
-        const container = document.getElementById('reviews-container');
         container.innerHTML = '';
         
         if (snapshot.empty) {
@@ -153,14 +220,37 @@
           container.appendChild(reviewCard);
         });
         
+        console.log('✅ 후기 로드 성공');
+        
       } catch (error) {
         console.error('후기 로드 실패:', error);
-        document.getElementById('reviews-container').innerHTML = `
+        container.innerHTML = `
           <div class="error-message">
-            <p>후기를 불러오는데 실패했습니다.</p>
+            <p>후기를 불러올 수 없습니다.</p>
+            <button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: hotpink; color: white; border: none; border-radius: 5px; cursor: pointer;">새로고침</button>
           </div>
         `;
       }
+    }
+
+    function showOfflineContent() {
+      console.log('📱 오프라인 모드로 전환');
+      
+      const slider = document.getElementById('gallery-slider');
+      slider.innerHTML = `
+        <div class="offline-content">
+          <h3>🌐 연결 문제</h3>
+          <p>네트워크 연결을 확인해주세요</p>
+          <button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: hotpink; color: white; border: none; border-radius: 25px; cursor: pointer; font-weight: 600;">다시 시도</button>
+        </div>
+      `;
+      
+      const reviewsContainer = document.getElementById('reviews-container');
+      reviewsContainer.innerHTML = `
+        <div class="offline-content">
+          <p>네트워크 연결 후 새로고침해주세요</p>
+        </div>
+      `;
     }
 
     function openModal(imageUrl, caption) {
@@ -220,10 +310,15 @@
         font-weight: 400;
       }
       
-      .loading-slider, .no-gallery, .error-gallery {
+      .loading-slider, .no-gallery, .error-gallery, .offline-content {
         text-align: center;
         padding: 3rem 2rem;
         color: #666;
+      }
+      
+      .offline-content h3 {
+        color: #333;
+        margin-bottom: 1rem;
       }
       
       .review-preview {
@@ -251,7 +346,7 @@
         font-size: 0.9rem;
       }
       
-      .no-reviews, .error-message {
+      .no-reviews, .error-message, .offline-content {
         text-align: center;
         padding: 2rem;
         color: #666;
@@ -272,6 +367,8 @@
       }
     `;
     document.head.appendChild(style);
+
+    console.log('📱 페이지 스크립트 로드 완료');
   </script>
 </body>
 </html>
