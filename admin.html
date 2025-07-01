@@ -145,21 +145,22 @@
       if (firebaseLoaded) return;
 
       try {
+        // 더 안정적인 Firebase 버전 사용
         const [
           { initializeApp },
-          { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp, where },
-          { getStorage, ref, uploadBytes, getDownloadURL, deleteObject }
+          { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp, where, connectFirestoreEmulator },
+          { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, connectStorageEmulator }
         ] = await Promise.all([
-          import("https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js"),
-          import("https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js"),
-          import("https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js")
+          import("https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"),
+          import("https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js"),
+          import("https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js")
         ]);
 
         const firebaseConfig = {
           apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
           authDomain: "nekorunail.firebaseapp.com",
           projectId: "nekorunail",
-          storageBucket: "nekorunail.appspot.com",
+          storageBucket: "nekorunail.firebasestorage.app",
           messagingSenderId: "571846382457",
           appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
           measurementId: "G-MW8CBHGSLG"
@@ -186,9 +187,25 @@
 
         firebaseLoaded = true;
         console.log('Firebase 초기화 완료');
+        
+        // 연결 테스트
+        try {
+          const testQuery = await window.fbGetDocs(window.fbQuery(window.fbCollection(db, "reviews"), window.fbOrderBy("createdAt", "desc")));
+          console.log('Firebase 연결 테스트 성공:', testQuery.size);
+        } catch (testError) {
+          console.warn('Firebase 연결 테스트 실패:', testError);
+        }
+        
       } catch (error) {
         console.error('Firebase 로드 실패:', error);
-        showNotification('Firebase 연결 실패', 'error');
+        showNotification('Firebase 연결 실패: ' + error.message, 'error');
+        
+        // 재시도 로직
+        setTimeout(() => {
+          firebaseLoaded = false;
+          console.log('Firebase 재연결 시도...');
+        }, 5000);
+        
         throw error;
       }
     }
