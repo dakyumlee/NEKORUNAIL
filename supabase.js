@@ -6,10 +6,15 @@ let supabase = null;
 async function initSupabase() {
   if (supabase) return supabase;
   
-  const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js@2');
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  
-  return supabase;
+  try {
+    const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js@2');
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('✅ Supabase 초기화 완료');
+    return supabase;
+  } catch (error) {
+    console.error('❌ Supabase 초기화 실패:', error);
+    throw error;
+  }
 }
 
 window.loadBookings = async (date = null) => {
@@ -23,7 +28,10 @@ window.loadBookings = async (date = null) => {
     
     const { data, error } = await query;
     
-    if (error) throw error;
+    if (error) {
+      console.error('Booking load error:', error);
+      return [];
+    }
     return data || [];
   } catch (error) {
     console.error('예약 로드 실패:', error);
@@ -36,10 +44,16 @@ window.addBooking = async (bookingData) => {
     const client = await initSupabase();
     const { data, error } = await client
       .from('bookings')
-      .insert([bookingData])
+      .insert([{
+        ...bookingData,
+        created_at: new Date().toISOString()
+      }])
       .select();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Booking add error:', error);
+      throw error;
+    }
     return data[0];
   } catch (error) {
     console.error('예약 추가 실패:', error);
@@ -55,7 +69,10 @@ window.loadGalleryImages = async () => {
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Gallery load error:', error);
+      return [];
+    }
     return data || [];
   } catch (error) {
     console.error('갤러리 로드 실패:', error);
@@ -68,10 +85,16 @@ window.addGalleryImage = async (imageData) => {
     const client = await initSupabase();
     const { data, error } = await client
       .from('gallery')
-      .insert([imageData])
+      .insert([{
+        ...imageData,
+        created_at: new Date().toISOString()
+      }])
       .select();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Gallery add error:', error);
+      throw error;
+    }
     return data[0];
   } catch (error) {
     console.error('갤러리 추가 실패:', error);
@@ -79,39 +102,7 @@ window.addGalleryImage = async (imageData) => {
   }
 };
 
-window.loadSlideshowImages = async () => {
-  try {
-    const client = await initSupabase();
-    const { data, error } = await client
-      .from('slideshow')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('슬라이드쇼 로드 실패:', error);
-    return [];
-  }
-};
-
-window.addSlideshowImage = async (slideshowData) => {
-  try {
-    const client = await initSupabase();
-    const { data, error } = await client
-      .from('slideshow')
-      .insert([slideshowData])
-      .select();
-    
-    if (error) throw error;
-    return data[0];
-  } catch (error) {
-    console.error('슬라이드쇼 추가 실패:', error);
-    throw error;
-  }
-};
-
-window.loadReviews = async (sortBy = 'newest', limit = 10) => {
+window.loadReviews = async (sortBy = 'newest', limit = null) => {
   try {
     const client = await initSupabase();
     let query = client.from('reviews').select('*');
@@ -136,7 +127,10 @@ window.loadReviews = async (sortBy = 'newest', limit = 10) => {
     
     const { data, error } = await query;
     
-    if (error) throw error;
+    if (error) {
+      console.error('Reviews load error:', error);
+      return [];
+    }
     return data || [];
   } catch (error) {
     console.error('리뷰 로드 실패:', error);
@@ -149,10 +143,16 @@ window.addReview = async (reviewData) => {
     const client = await initSupabase();
     const { data, error } = await client
       .from('reviews')
-      .insert([reviewData])
+      .insert([{
+        ...reviewData,
+        created_at: new Date().toISOString()
+      }])
       .select();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Review add error:', error);
+      throw error;
+    }
     return data[0];
   } catch (error) {
     console.error('리뷰 추가 실패:', error);
@@ -168,7 +168,10 @@ window.deleteRecord = async (table, id) => {
       .delete()
       .eq('id', id);
     
-    if (error) throw error;
+    if (error) {
+      console.error('Delete error:', error);
+      throw error;
+    }
     return true;
   } catch (error) {
     console.error('삭제 실패:', error);
@@ -185,7 +188,10 @@ window.updateBookingStatus = async (id, status) => {
       .eq('id', id)
       .select();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Status update error:', error);
+      throw error;
+    }
     return data[0];
   } catch (error) {
     console.error('상태 업데이트 실패:', error);
@@ -240,5 +246,7 @@ window.showNotification = function(message, type = 'success') {
     }
   });
 };
+
+initSupabase().catch(console.error);
 
 console.log('✅ Supabase 클라이언트 로드 완료');
