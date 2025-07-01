@@ -608,12 +608,14 @@
           </div>
       `;
       
-      if (bookingsData.length === 0) {
+      if (!bookingsData || bookingsData.length === 0) {
           bookingsList.innerHTML += '<div style="text-align: center; padding: 2rem; color: #718096;">예약이 없습니다.</div>';
           return;
       }
       
       bookingsData.forEach(data => {
+          if (!data || !data.id) return;
+          
           const row = document.createElement('div');
           row.className = 'data-row';
           row.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 1fr auto';
@@ -622,24 +624,40 @@
           const statusClass = `status-${status}`;
           const statusText = status === 'confirmed' ? '확정' : status === 'cancelled' ? '취소' : '대기';
           
-          const services = Array.isArray(data.services) ? data.services.join(', ') : (data.services || '기본 케어');
+          let services = '기본 케어';
+          if (data.services) {
+              if (Array.isArray(data.services)) {
+                  services = data.services.join(', ');
+              } else if (typeof data.services === 'string') {
+                  services = data.services;
+              }
+          }
+          
+          const safeData = {
+              id: data.id || '',
+              name: data.name || '이름없음',
+              phone: data.phone || '연락처없음',
+              date: data.date || '',
+              time: data.time || '',
+              notes: data.notes || ''
+          };
           
           row.innerHTML = `
               <div>
-                  <strong>${data.name}</strong>
-                  ${data.notes ? `<br><small style="color: #666; font-size: 0.8rem;">💬 ${data.notes.substring(0, 30)}${data.notes.length > 30 ? '...' : ''}</small>` : ''}
+                  <strong>${safeData.name}</strong>
+                  ${safeData.notes ? `<br><small style="color: #666; font-size: 0.8rem;">💬 ${safeData.notes.substring(0, 30)}${safeData.notes.length > 30 ? '...' : ''}</small>` : ''}
               </div>
-              <div>${data.phone}</div>
-              <div>${data.date}<br><small>${data.time}</small></div>
+              <div>${safeData.phone}</div>
+              <div>${safeData.date}<br><small>${safeData.time}</small></div>
               <div style="font-size: 0.9rem; color: #666;">${services}</div>
               <div><span class="status-badge ${statusClass}">${statusText}</span></div>
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                  <select onchange="adminUpdateBookingStatus('${data.id}', this.value)" style="font-size: 0.9rem;">
+                  <select onchange="adminUpdateBookingStatus('${safeData.id}', this.value)" style="font-size: 0.9rem;">
                       <option value="pending" ${status === 'pending' ? 'selected' : ''}>대기</option>
                       <option value="confirmed" ${status === 'confirmed' ? 'selected' : ''}>확정</option>
                       <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>취소</option>
                   </select>
-                  <button onclick="showBookingDetails('${data.id}', ${JSON.stringify(data).replace(/"/g, '&quot;')})" style="
+                  <button onclick="showBookingDetails('${safeData.id}', ${JSON.stringify(safeData).replace(/"/g, '&quot;')})" style="
                       background: #3b82f6; 
                       color: white; 
                       border: none; 
@@ -648,7 +666,7 @@
                       cursor: pointer; 
                       font-size: 0.8rem;
                   ">상세</button>
-                  <button class="delete-btn" onclick="deleteBooking('${data.id}')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">삭제</button>
+                  <button class="delete-btn" onclick="deleteBooking('${safeData.id}')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">삭제</button>
               </div>
           `;
           bookingsList.appendChild(row);
@@ -793,37 +811,35 @@
       try {
           showNotification('업로드 중...', 'info');
           
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('upload_preset', 'nekorunail');
-          
-          const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/ddlkhq98s/image/upload', {
-              method: 'POST',
-              body: formData
-          });
-          
-          const cloudinaryData = await cloudinaryResponse.json();
-          
-          await window.addGalleryImage({
-              image_url: cloudinaryData.secure_url,
-              caption: caption || '무제'
-          });
-          
-          showNotification('✅ 업로드 완료!', 'success');
-          
-          const uploadForm = document.getElementById('upload-form');
-          if (uploadForm) uploadForm.reset();
-          
-          const uploadSection = document.getElementById('upload-section');
-          if (uploadSection) uploadSection.style.display = 'none';
-          
-          clearCache('gallery');
-          loadGallery();
-          loadDashboard();
+          const reader = new FileReader();
+          reader.onload = async function(e) {
+              try {
+                  await window.addGalleryImage({
+                      image_url: e.target.result,
+                      caption: caption || '무제'
+                  });
+                  
+                  showNotification('✅ 업로드 완료!', 'success');
+                  
+                  const uploadForm = document.getElementById('upload-form');
+                  if (uploadForm) uploadForm.reset();
+                  
+                  const uploadSection = document.getElementById('upload-section');
+                  if (uploadSection) uploadSection.style.display = 'none';
+                  
+                  clearCache('gallery');
+                  loadGallery();
+                  loadDashboard();
+              } catch (error) {
+                  console.error('갤러리 저장 실패:', error);
+                  showNotification(`저장 실패: ${error.message}`, 'error');
+              }
+          };
+          reader.readAsDataURL(file);
           
       } catch (error) {
           console.error('업로드 실패:', error);
-          showNotification('업로드 실패', 'error');
+          showNotification(`업로드 실패: ${error.message}`, 'error');
       }
     }
 
