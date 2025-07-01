@@ -591,9 +591,11 @@
   <footer>
     <p>NEKORUNAIL ⎜ Instagram @nekorunail ⎜ 2025</p>
   </footer>
+  
   <script src="supabase.js"></script>
   <script>
     const timeSlotCache = new Map();
+    
     document.addEventListener("DOMContentLoaded", () => {
       const form = document.getElementById("reserve-form");
       const dateInput = document.getElementById("date");
@@ -616,9 +618,10 @@
     
     async function updateAvailableTimeSlots(d) {
       if (!d) return;
-      const booked = (await window.loadBookings(d))
-        .filter(b => b.status !== "cancelled")
+      const booked = (await window.loadBookings())
+        .filter(b => b.date === d && b.status !== "cancelled")
         .map(b => b.time);
+      
       document.querySelectorAll(".time-option").forEach(opt => {
         const inp = opt.querySelector("input");
         const lbl = opt.querySelector("label");
@@ -629,6 +632,7 @@
         lbl.style.cursor = "pointer";
         lbl.removeAttribute("title");
       });
+      
       booked.forEach(t => {
         const inp = document.querySelector(`input[value="${t}"]`);
         if (inp) {
@@ -654,22 +658,26 @@
       const t = tEl ? tEl.value : "";
       const sv = Array.from(document.querySelectorAll('input[name="services"]:checked')).map(i => i.value);
       const notes = document.getElementById("notes").value.trim();
+      
       if (!n || !p || !d || !t) {
         window.showNotification("모든 필수 정보를 입력해주세요.","error");
         return;
       }
+      
       const btn = document.getElementById("submit-btn");
       const txt = btn.querySelector(".btn-text");
       const spin = btn.querySelector(".loading-spinner");
       txt.style.display = "none";
       spin.style.display = "inline-block";
       btn.disabled = true;
+      
       try {
         if (!await checkTimeSlotAvailable(d, t)) {
           window.showNotification("해당 시간 이미 예약이 있습니다.","warning");
           await updateAvailableTimeSlots(d);
           return;
         }
+        
         await window.addBooking({
           name: n,
           phone: p,
@@ -679,6 +687,7 @@
           notes,
           status: "pending"
         });
+        
         window.showNotification("✅ 예약 완료!","success");
         document.getElementById("reserve-form").reset();
         timeSlotCache.clear();

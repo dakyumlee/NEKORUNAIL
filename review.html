@@ -149,38 +149,26 @@
   <script src="supabase.js"></script>
   <script>
     let selectedRating = 0;
-    let currentPage = 0;
-    const REVIEWS_PER_PAGE = 5;
     let allReviews = [];
     let isLoading = false;
 
     document.addEventListener("DOMContentLoaded", () => {
-      console.log('페이지 로드 완료');
       initializeStarRating();
       setupImagePreview();
       initializeReviewFlow();
     });
 
     function initializeStarRating() {
-      console.log('별점 시스템 초기화');
       const starRating = document.getElementById('star-rating');
       const ratingInput = document.getElementById('rating');
       const ratingText = document.querySelector('.rating-text');
       
-      if (!starRating || !ratingInput || !ratingText) {
-        console.error('별점 요소를 찾을 수 없음');
-        return;
-      }
-      
       starRating.innerHTML = [1,2,3,4,5].map(n => `<span class="star" data-rating="${n}">⭐</span>`).join('');
       const stars = starRating.querySelectorAll('.star');
-      
-      console.log('별점 개수:', stars.length);
       
       stars.forEach(star => {
         const r = +star.dataset.rating;
         star.addEventListener('click', () => {
-          console.log('별점 클릭:', r);
           selectedRating = r;
           ratingInput.value = r;
           updateStars(stars, r);
@@ -229,30 +217,9 @@
     }
 
     function initializeReviewFlow() {
-      document.getElementById("review-sort").addEventListener("change", () => loadReviews(true));
-      document.getElementById("load-more-btn").addEventListener("click", () => loadReviews(false));
+      document.getElementById("review-sort").addEventListener("change", () => loadReviews());
       document.getElementById("review-form").addEventListener("submit", async e => { e.preventDefault(); await submitReview(); });
-    
-      const testBtn = document.createElement('button');
-      testBtn.textContent = '테스트 리뷰 추가';
-      testBtn.style.cssText = 'margin: 10px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px;';
-      testBtn.onclick = async () => {
-        try {
-          await window.addReview({
-            name: '테스트 사용자',
-            content: '테스트 리뷰입니다. 매우 만족합니다!',
-            rating: 5,
-            image_url: null
-          });
-          console.log('테스트 리뷰 추가 완료');
-          loadReviews(true);
-        } catch (error) {
-          console.error('테스트 리뷰 추가 실패:', error);
-        }
-      };
-      document.querySelector('.reviews-controls').appendChild(testBtn);
-      
-      loadReviews(true);
+      loadReviews();
     }
 
     async function submitReview() {
@@ -285,7 +252,7 @@
         selectedRating=0; 
         updateStars(document.querySelectorAll('.star'),0); 
         updateRatingText(document.querySelector('.rating-text'),0);
-        loadReviews(true);
+        loadReviews();
       } catch(err){ 
         console.error(err); 
         window.showNotification("등록 실패", "error"); 
@@ -296,50 +263,31 @@
       }
     }
 
-    async function loadReviews(reset) {
+    async function loadReviews() {
       if(isLoading) return; 
       isLoading=true;
       const cont = document.getElementById("reviews-container");
-      const btn = document.getElementById("load-more-btn");
       
-      if(reset) { 
-        cont.innerHTML='<div class="loading-reviews"><p>로딩 중…</p></div>'; 
-        currentPage = 0; 
-        allReviews = [];
-      }
+      cont.innerHTML='<div class="loading-reviews"><p>로딩 중…</p></div>'; 
       
       try {
-        console.log('리뷰 로딩 시작...');
         const sort = document.getElementById("review-sort").value;
-        const reviews = await window.loadReviews(sort);
-        console.log('로드된 리뷰:', reviews);
+        const reviews = await window.loadReviews(sort, 100);
         
-        if(reset) {
-          cont.innerHTML='';
-          allReviews = Array.isArray(reviews) ? reviews : [];
-        }
+        cont.innerHTML='';
+        allReviews = Array.isArray(reviews) ? reviews : [];
         
-        if(allReviews.length === 0 && reset){
+        if(allReviews.length === 0){
           cont.innerHTML='<div class="no-reviews"><p>등록된 후기가 없습니다.</p><p>첫 후기를 남겨보세요!</p></div>';
-          btn.style.display='none'; 
-          isLoading=false; 
           return;
         }
         
-        const startIndex = currentPage * REVIEWS_PER_PAGE;
-        const endIndex = startIndex + REVIEWS_PER_PAGE;
-        const reviewsToShow = allReviews.slice(startIndex, endIndex);
-        console.log('표시할 리뷰:', reviewsToShow);
-        
-        reviewsToShow.forEach(d => {
-          if (!d || !d.id) {
-            console.log('잘못된 리뷰 데이터:', d);
-            return;
-          }
+        allReviews.forEach(d => {
+          if (!d || !d.id) return;
           
           const date = d.created_at ? new Date(d.created_at).toLocaleDateString('ko-KR') : '';
           const rating = Math.max(1, Math.min(5, parseInt(d.rating) || 5));
-          const stars = '⭐'.repeat(rating) + '☆'.repeat(5-rating);
+          const stars = '⭐'.repeat(rating);
           const imgHtml = d.image_url ? `<div class="review-image-container"><img src="${d.image_url}" class="review-image" onclick="openImageModal('${d.image_url}','${(d.name || '익명')}님의 후기')" /></div>` : '';
           
           const box = document.createElement('div'); 
@@ -355,15 +303,9 @@
           `;
           cont.appendChild(box);
         });
-        
-        currentPage++;
-        btn.style.display = endIndex < allReviews.length ? 'block' : 'none';
-        console.log('리뷰 로딩 완료');
       } catch(error) {
         console.error('리뷰 로드 실패:', error);
-        if(reset) {
-          cont.innerHTML='<div class="error-message"><p>리뷰 로드에 실패했습니다.</p><p>오류: ' + error.message + '</p></div>';
-        }
+        cont.innerHTML='<div class="error-message"><p>리뷰 로드에 실패했습니다.</p></div>';
       }
       isLoading = false;
     }
@@ -376,8 +318,6 @@
       m.onclick=e=>{ if(e.target===m) m.remove(); };
       document.addEventListener('keydown',e=>{ if(e.key==='Escape') m.remove(); });
     };
-
-    console.log('리뷰 페이지 Supabase 연동 완료');
   </script>
 </body>
 </html>

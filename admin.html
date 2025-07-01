@@ -269,14 +269,6 @@
       
       document.body.appendChild(modal);
       
-      const escHandler = function(e) {
-          if (e.key === 'Escape') {
-              closeBookingModal();
-              document.removeEventListener('keydown', escHandler);
-          }
-      };
-      document.addEventListener('keydown', escHandler);
-      
       modal.addEventListener('click', function(e) {
           if (e.target === modal) {
               closeBookingModal();
@@ -297,11 +289,6 @@
       const loginBtn = document.getElementById('login-btn');
       const adminPass = document.getElementById('admin-pass');
       const logoutBtn = document.getElementById('logout-btn');
-      
-      if (!loginOverlay || !adminPanel || !loginBtn || !adminPass) {
-          console.error('필수 요소를 찾을 수 없습니다');
-          return;
-      }
       
       checkLoginStatus(loginOverlay, adminPanel);
       setupEvents(loginBtn, adminPass, logoutBtn, loginOverlay, adminPanel);
@@ -414,7 +401,7 @@
       const password = adminPass.value.trim();
       
       if (!password) {
-          showNotification('비밀번호를 입력해주세요.', 'error');
+          window.showNotification('비밀번호를 입력해주세요.', 'error');
           adminPass.focus();
           return;
       }
@@ -423,11 +410,11 @@
           isLoggedIn = true;
           sessionStorage.setItem('admin_logged_in', 'true');
           
-          showNotification('✅ 로그인 성공!', 'success');
+          window.showNotification('✅ 로그인 성공!', 'success');
           showAdminPanel(loginOverlay, adminPanel);
           loadDashboard();
       } else {
-          showNotification('❌ 비밀번호가 틀렸습니다.', 'error');
+          window.showNotification('❌ 비밀번호가 틀렸습니다.', 'error');
           adminPass.value = '';
           adminPass.focus();
       }
@@ -438,7 +425,7 @@
       sessionStorage.removeItem('admin_logged_in');
       clearCache();
       
-      showNotification('로그아웃되었습니다.', 'success');
+      window.showNotification('로그아웃되었습니다.', 'success');
       showLoginScreen(loginOverlay, adminPanel);
       
       if (adminPass) {
@@ -494,14 +481,14 @@
           if (cachedBookings && cachedGallery && cachedReviews) {
               updateDashboardStats(cachedBookings, cachedGallery, cachedReviews);
               loadRecentBookings(cachedBookings);
-              showNotification('📊 캐시된 데이터로 업데이트됨!', 'success');
+              window.showNotification('📊 캐시된 데이터로 업데이트됨!', 'success');
               return;
           }
 
           const [bookingsData, galleryData, reviewsData] = await Promise.all([
               window.loadBookings(),
               window.loadGalleryImages(),
-              window.loadReviews()
+              window.loadReviews('newest', 100)
           ]);
           
           setCachedData('bookings', bookingsData);
@@ -511,10 +498,10 @@
           updateDashboardStats(bookingsData, galleryData, reviewsData);
           loadRecentBookings(bookingsData);
           
-          showNotification('📊 데이터로 업데이트됨!', 'success');
+          window.showNotification('📊 데이터로 업데이트됨!', 'success');
       } catch (error) {
           console.error('대시보드 로드 실패:', error);
-          showNotification('대시보드 로드 실패', 'error');
+          window.showNotification('대시보드 로드 실패', 'error');
       }
     }
 
@@ -737,7 +724,7 @@
               const sortSelect = document.getElementById('review-sort');
               const sortValue = sortSelect ? sortSelect.value : 'newest';
               
-              reviewsData = await window.loadReviews(sortValue);
+              reviewsData = await window.loadReviews(sortValue, 100);
               setCachedData('reviews', reviewsData);
           }
           
@@ -799,17 +786,17 @@
       const caption = captionInput.value.trim();
       
       if (!file) {
-          showNotification('파일을 선택해주세요.', 'error');
+          window.showNotification('파일을 선택해주세요.', 'error');
           return;
       }
       
       if (!file.type.startsWith('image/')) {
-          showNotification('이미지 파일만 업로드 가능합니다.', 'error');
+          window.showNotification('이미지 파일만 업로드 가능합니다.', 'error');
           return;
       }
       
       try {
-          showNotification('업로드 중...', 'info');
+          window.showNotification('업로드 중...', 'info');
           
           const reader = new FileReader();
           reader.onload = async function(e) {
@@ -819,7 +806,7 @@
                       caption: caption || '무제'
                   });
                   
-                  showNotification('✅ 업로드 완료!', 'success');
+                  window.showNotification('✅ 업로드 완료!', 'success');
                   
                   const uploadForm = document.getElementById('upload-form');
                   if (uploadForm) uploadForm.reset();
@@ -832,26 +819,26 @@
                   loadDashboard();
               } catch (error) {
                   console.error('갤러리 저장 실패:', error);
-                  showNotification(`저장 실패: ${error.message}`, 'error');
+                  window.showNotification(`저장 실패: ${error.message}`, 'error');
               }
           };
           reader.readAsDataURL(file);
           
       } catch (error) {
           console.error('업로드 실패:', error);
-          showNotification(`업로드 실패: ${error.message}`, 'error');
+          window.showNotification(`업로드 실패: ${error.message}`, 'error');
       }
     }
 
     window.adminUpdateBookingStatus = async function(docId, newStatus) {
       try {
           await window.updateBookingStatus(docId, newStatus);
-          showNotification('상태 업데이트 완료!', 'success');
+          window.showNotification('상태 업데이트 완료!', 'success');
           clearCache('bookings');
           loadBookings();
       } catch (error) {
           console.error('상태 업데이트 실패:', error);
-          showNotification('상태 업데이트 실패', 'error');
+          window.showNotification('상태 업데이트 실패', 'error');
       }
     };
 
@@ -860,13 +847,13 @@
       
       try {
           await window.deleteRecord('bookings', docId);
-          showNotification('삭제 완료!', 'success');
+          window.showNotification('삭제 완료!', 'success');
           clearCache('bookings');
           loadBookings();
           loadDashboard();
       } catch (error) {
           console.error('삭제 실패:', error);
-          showNotification('삭제 실패', 'error');
+          window.showNotification('삭제 실패', 'error');
       }
     };
 
@@ -875,13 +862,13 @@
       
       try {
           await window.deleteRecord('gallery', docId);
-          showNotification('삭제 완료!', 'success');
+          window.showNotification('삭제 완료!', 'success');
           clearCache('gallery');
           loadGallery();
           loadDashboard();
       } catch (error) {
           console.error('삭제 실패:', error);
-          showNotification('삭제 실패', 'error');
+          window.showNotification('삭제 실패', 'error');
       }
     };
 
@@ -890,17 +877,15 @@
       
       try {
           await window.deleteRecord('reviews', docId);
-          showNotification('삭제 완료!', 'success');
+          window.showNotification('삭제 완료!', 'success');
           clearCache('reviews');
           loadReviews();
           loadDashboard();
       } catch (error) {
           console.error('삭제 실패:', error);
-          showNotification('삭제 실패', 'error');
+          window.showNotification('삭제 실패', 'error');
       }
     };
-
-    console.log('=== 관리자 시스템 로드 완료 ===');
   </script>
 </body>
 </html>
