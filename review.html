@@ -317,46 +317,6 @@
       }
       isLoading = false;
     }
-        
-        reviews.forEach((d, index) => {
-          if (!d || !d.id) {
-            console.log('잘못된 리뷰:', d);
-            return;
-          }
-          
-          console.log(`리뷰 ${index + 1} 처리 중:`, d);
-          
-          const date = d.created_at ? new Date(d.created_at).toLocaleDateString('ko-KR') : '';
-          const rating = Math.max(1, Math.min(5, parseInt(d.rating) || 5));
-          const stars = '⭐'.repeat(rating);
-          const imgHtml = d.image_url ? 
-            `<div class="review-image-container">
-               <img src="${d.image_url}" class="review-image" onclick="openImageModal('${d.image_url}','${(d.name || '익명')}님의 후기')" />
-             </div>` : '';
-          
-          const box = document.createElement('div'); 
-          box.className = 'review-box';
-          box.innerHTML = `
-            <div class="review-header">
-              <strong class="review-author">${d.name || '익명'}</strong>
-              <span class="review-date">${date}</span>
-            </div>
-            <div class="review-rating">${stars}</div>
-            <div class="review-content">${d.content || ''}</div>
-            ${imgHtml}
-          `;
-          cont.appendChild(box);
-          console.log(`리뷰 ${index + 1} 추가 완료`);
-        });
-        
-        console.log('모든 리뷰 표시 완료');
-        
-      } catch(error) {
-        console.error('리뷰 로드 실패:', error);
-        cont.innerHTML='<div class="error-message"><p>리뷰 로드에 실패했습니다.</p><p>오류: ' + error.message + '</p></div>';
-      }
-      isLoading = false;
-    }
 
     window.openImageModal = (url,cap) => {
       const m=document.createElement('div'); m.className='image-modal';
