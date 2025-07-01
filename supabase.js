@@ -121,16 +121,19 @@ window.loadReviews = async (sortBy = 'newest', limit = null) => {
         query = query.order('created_at', { ascending: false });
     }
     
-    if (limit) {
+    if (limit && limit > 0) {
       query = query.limit(limit);
     }
     
+    console.log('리뷰 쿼리 실행 중...');
     const { data, error } = await query;
     
     if (error) {
-      console.error('Reviews load error:', error);
+      console.error('Reviews load error details:', error);
       return [];
     }
+    
+    console.log('로드된 리뷰 데이터:', data);
     return data || [];
   } catch (error) {
     console.error('리뷰 로드 실패:', error);
@@ -141,18 +144,28 @@ window.loadReviews = async (sortBy = 'newest', limit = null) => {
 window.addReview = async (reviewData) => {
   try {
     const client = await initSupabase();
+    
+    const cleanData = {
+      name: String(reviewData.name || '익명'),
+      content: String(reviewData.content || ''),
+      rating: parseInt(reviewData.rating) || 5,
+      image_url: reviewData.image_url || '',
+      created_at: new Date().toISOString()
+    };
+    
+    console.log('추가할 리뷰 데이터:', cleanData);
+    
     const { data, error } = await client
       .from('reviews')
-      .insert([{
-        ...reviewData,
-        created_at: new Date().toISOString()
-      }])
+      .insert([cleanData])
       .select();
     
     if (error) {
-      console.error('Review add error:', error);
-      throw error;
+      console.error('Review add error details:', error);
+      throw new Error(`리뷰 추가 실패: ${error.message}`);
     }
+    
+    console.log('리뷰 추가 성공:', data);
     return data[0];
   } catch (error) {
     console.error('리뷰 추가 실패:', error);
