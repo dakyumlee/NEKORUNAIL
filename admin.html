@@ -130,158 +130,14 @@
     </section>
   </main>
 
-  <script src="supabase.js"></script>
+    <script src="supabase.js"></script>
   <script>
     let isLoggedIn = false;
-    let dataCache = {
-      bookings: { data: null, timestamp: 0 },
-      gallery: { data: null, timestamp: 0 },
-      reviews: { data: null, timestamp: 0 }
-    };
-    const CACHE_DURATION = 2 * 60 * 1000;
+    let isLoading = false;
 
     document.addEventListener('DOMContentLoaded', function() {
       initializeAdmin();
     });
-
-    function getCachedData(type) {
-      const cached = dataCache[type];
-      if (cached.data && (Date.now() - cached.timestamp < CACHE_DURATION)) {
-        return cached.data;
-      }
-      return null;
-    }
-
-    function setCachedData(type, data) {
-      dataCache[type] = {
-        data: data,
-        timestamp: Date.now()
-      };
-    }
-
-    function clearCache(type = null) {
-      if (type) {
-        dataCache[type] = { data: null, timestamp: 0 };
-      } else {
-        Object.keys(dataCache).forEach(key => {
-          dataCache[key] = { data: null, timestamp: 0 };
-        });
-      }
-    }
-
-    window.showBookingDetails = function(docId, bookingData) {
-      const services = Array.isArray(bookingData.services) ? bookingData.services.join(', ') : (bookingData.services || '기본 케어');
-      const notes = bookingData.notes || '특이사항 없음';
-      const createdAt = new Date(bookingData.created_at);
-      const createdDate = createdAt.toLocaleDateString('ko-KR');
-      const createdTime = createdAt.toLocaleTimeString('ko-KR');
-      
-      const modal = document.createElement('div');
-      modal.id = 'booking-detail-modal';
-      modal.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 10000;
-      `;
-      
-      modal.innerHTML = `
-          <div style="
-              background: white;
-              border-radius: 18px;
-              padding: 2rem;
-              max-width: 600px;
-              width: 90%;
-              max-height: 80vh;
-              overflow-y: auto;
-              box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-          ">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f3f4f6; padding-bottom: 1rem;">
-                  <h3 style="margin: 0; color: #333; font-size: 1.5rem;">📋 예약 상세정보</h3>
-                  <span onclick="closeBookingModal()" style="
-                      font-size: 1.5rem;
-                      cursor: pointer;
-                      color: #666;
-                      width: 30px;
-                      height: 30px;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      border-radius: 50%;
-                      background: #f3f4f6;
-                      transition: all 0.3s ease;
-                  " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">&times;</span>
-              </div>
-              
-              <div style="display: grid; gap: 1.5rem;">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                      <div style="background: #f8fafc; padding: 1rem; border-radius: 10px; border-left: 4px solid hotpink;">
-                          <strong style="color: #333; display: block; margin-bottom: 0.5rem;">👤 고객 정보</strong>
-                          <div style="color: #666;">이름: ${bookingData.name}</div>
-                          <div style="color: #666;">연락처: ${bookingData.phone}</div>
-                      </div>
-                      
-                      <div style="background: #f0fdf4; padding: 1rem; border-radius: 10px; border-left: 4px solid #22c55e;">
-                          <strong style="color: #333; display: block; margin-bottom: 0.5rem;">📅 예약 일정</strong>
-                          <div style="color: #666;">날짜: ${bookingData.date}</div>
-                          <div style="color: #666;">시간: ${bookingData.time}</div>
-                      </div>
-                  </div>
-                  
-                  <div style="background: #fef3c7; padding: 1rem; border-radius: 10px; border-left: 4px solid #f59e0b;">
-                      <strong style="color: #333; display: block; margin-bottom: 0.5rem;">💅 선택 서비스</strong>
-                      <div style="color: #666; line-height: 1.5;">${services}</div>
-                  </div>
-                  
-                  <div style="background: #e0f2fe; padding: 1rem; border-radius: 10px; border-left: 4px solid #0ea5e9;">
-                      <strong style="color: #333; display: block; margin-bottom: 0.5rem;">📝 고객 요청사항</strong>
-                      <div style="color: #666; line-height: 1.6; white-space: pre-wrap;">${notes}</div>
-                  </div>
-                  
-                  <div style="background: #f3f4f6; padding: 1rem; border-radius: 10px; border-left: 4px solid #6b7280;">
-                      <strong style="color: #333; display: block; margin-bottom: 0.5rem;">ℹ️ 접수 정보</strong>
-                      <div style="color: #666;">접수일: ${createdDate}</div>
-                      <div style="color: #666;">접수시간: ${createdTime}</div>
-                  </div>
-              </div>
-              
-              <div style="margin-top: 2rem; text-align: center;">
-                  <button onclick="closeBookingModal()" style="
-                      background: hotpink;
-                      color: white;
-                      border: none;
-                      padding: 0.8rem 2rem;
-                      border-radius: 50px;
-                      cursor: pointer;
-                      font-size: 1rem;
-                      font-weight: 600;
-                      transition: all 0.3s ease;
-                  " onmouseover="this.style.background='#ff69b4'" onmouseout="this.style.background='hotpink'">확인</button>
-              </div>
-          </div>
-      `;
-      
-      document.body.appendChild(modal);
-      
-      modal.addEventListener('click', function(e) {
-          if (e.target === modal) {
-              closeBookingModal();
-          }
-      });
-    };
-
-    window.closeBookingModal = function() {
-      const modal = document.getElementById('booking-detail-modal');
-      if (modal) {
-          document.body.removeChild(modal);
-      }
-    };
 
     function initializeAdmin() {
       const loginOverlay = document.getElementById('login-overlay');
@@ -300,7 +156,7 @@
       if (savedLogin === 'true') {
           isLoggedIn = true;
           showAdminPanel(loginOverlay, adminPanel);
-          loadDashboard();
+          setTimeout(() => loadDashboard(), 100);
       } else {
           showLoginScreen(loginOverlay, adminPanel);
       }
@@ -371,29 +227,12 @@
       
       const refreshBookings = document.getElementById('refresh-bookings');
       if (refreshBookings) {
-          refreshBookings.onclick = () => {
-              clearCache('bookings');
-              loadBookings();
-          };
+          refreshBookings.onclick = () => loadBookingsData();
       }
       
-      const dateFilter = document.getElementById('date-filter');
-      const statusFilter = document.getElementById('status-filter');
       const reviewSort = document.getElementById('review-sort');
-      
-      if (dateFilter) {
-          dateFilter.addEventListener('change', () => loadBookings());
-      }
-      
-      if (statusFilter) {
-          statusFilter.addEventListener('change', () => loadBookings());
-      }
-      
       if (reviewSort) {
-          reviewSort.addEventListener('change', () => {
-              clearCache('reviews');
-              loadReviews();
-          });
+          reviewSort.addEventListener('change', () => loadReviewsData());
       }
     }
 
@@ -412,7 +251,7 @@
           
           window.showNotification('✅ 로그인 성공!', 'success');
           showAdminPanel(loginOverlay, adminPanel);
-          loadDashboard();
+          setTimeout(() => loadDashboard(), 100);
       } else {
           window.showNotification('❌ 비밀번호가 틀렸습니다.', 'error');
           adminPass.value = '';
@@ -423,7 +262,6 @@
     function handleLogout(loginOverlay, adminPanel, adminPass) {
       isLoggedIn = false;
       sessionStorage.removeItem('admin_logged_in');
-      clearCache();
       
       window.showNotification('로그아웃되었습니다.', 'success');
       showLoginScreen(loginOverlay, adminPanel);
@@ -444,6 +282,8 @@
     }
 
     function switchTab(tabName) {
+      if (isLoading) return;
+      
       const navBtns = document.querySelectorAll('.nav-btn:not(.logout)');
       navBtns.forEach(btn => btn.classList.remove('active'));
       
@@ -461,58 +301,58 @@
               loadDashboard();
               break;
           case 'bookings':
-              loadBookings();
+              loadBookingsData();
               break;
           case 'gallery':
-              loadGallery();
+              loadGalleryData();
               break;
           case 'reviews':
-              loadReviews();
+              loadReviewsData();
               break;
       }
     }
 
     async function loadDashboard() {
+      if (isLoading) return;
+      isLoading = true;
+      
       try {
-          const cachedBookings = getCachedData('bookings');
-          const cachedGallery = getCachedData('gallery');
-          const cachedReviews = getCachedData('reviews');
-
-          if (cachedBookings && cachedGallery && cachedReviews) {
-              updateDashboardStats(cachedBookings, cachedGallery, cachedReviews);
-              loadRecentBookings(cachedBookings);
-              window.showNotification('📊 캐시된 데이터로 업데이트됨!', 'success');
-              return;
-          }
-
+          console.log('대시보드 로드 시작');
+          
           const [bookingsData, galleryData, reviewsData] = await Promise.all([
               window.loadBookings(),
-              window.loadGalleryImages(),
+              window.loadGalleryImages(), 
               window.loadReviews('newest', 100)
           ]);
           
-          setCachedData('bookings', bookingsData);
-          setCachedData('gallery', galleryData);
-          setCachedData('reviews', reviewsData);
+          console.log('데이터 로드 완료:', {
+              bookings: bookingsData?.length || 0,
+              gallery: galleryData?.length || 0, 
+              reviews: reviewsData?.length || 0
+          });
           
           updateDashboardStats(bookingsData, galleryData, reviewsData);
           loadRecentBookings(bookingsData);
           
-          window.showNotification('📊 데이터로 업데이트됨!', 'success');
+          window.showNotification('📊 대시보드 업데이트 완료!', 'success');
       } catch (error) {
           console.error('대시보드 로드 실패:', error);
           window.showNotification('대시보드 로드 실패', 'error');
+      } finally {
+          isLoading = false;
       }
     }
 
     function updateDashboardStats(bookingsData, galleryData, reviewsData) {
       const today = new Date().toISOString().split('T')[0];
-      const todayBookingsCount = bookingsData.filter(booking => booking.date === today).length;
+      const todayBookingsCount = Array.isArray(bookingsData) 
+        ? bookingsData.filter(booking => booking.date === today).length 
+        : 0;
       
       const stats = {
-          'total-bookings': bookingsData.length,
-          'total-gallery': galleryData.length,
-          'total-reviews': reviewsData.length,
+          'total-bookings': Array.isArray(bookingsData) ? bookingsData.length : 0,
+          'total-gallery': Array.isArray(galleryData) ? galleryData.length : 0,
+          'total-reviews': Array.isArray(reviewsData) ? reviewsData.length : 0,
           'today-bookings': todayBookingsCount
       };
       
@@ -524,7 +364,7 @@
 
     function loadRecentBookings(bookingsData) {
       const recentBookings = document.getElementById('recent-bookings');
-      if (!recentBookings) return;
+      if (!recentBookings || !Array.isArray(bookingsData)) return;
       
       const sortedBookings = bookingsData
           .sort((a, b) => {
@@ -561,23 +401,24 @@
       });
     }
 
-    async function loadBookings() {
+    async function loadBookingsData() {
+      if (isLoading) return;
+      isLoading = true;
+      
       const bookingsList = document.getElementById('bookings-list');
-      if (!bookingsList) return;
+      if (!bookingsList) {
+          isLoading = false;
+          return;
+      }
       
       try {
-          let bookingsData = getCachedData('bookings');
-          
-          if (!bookingsData) {
-              bookingsData = await window.loadBookings();
-              setCachedData('bookings', bookingsData);
-          }
-          
+          const bookingsData = await window.loadBookings();
           displayBookings(bookingsData);
-          
       } catch (error) {
           console.error('예약 로드 실패:', error);
           bookingsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
+      } finally {
+          isLoading = false;
       }
     }
 
@@ -595,7 +436,7 @@
           </div>
       `;
       
-      if (!bookingsData || bookingsData.length === 0) {
+      if (!Array.isArray(bookingsData) || bookingsData.length === 0) {
           bookingsList.innerHTML += '<div style="text-align: center; padding: 2rem; color: #718096;">예약이 없습니다.</div>';
           return;
       }
@@ -620,63 +461,46 @@
               }
           }
           
-          const safeData = {
-              id: data.id || '',
-              name: data.name || '이름없음',
-              phone: data.phone || '연락처없음',
-              date: data.date || '',
-              time: data.time || '',
-              notes: data.notes || ''
-          };
-          
           row.innerHTML = `
               <div>
-                  <strong>${safeData.name}</strong>
-                  ${safeData.notes ? `<br><small style="color: #666; font-size: 0.8rem;">💬 ${safeData.notes.substring(0, 30)}${safeData.notes.length > 30 ? '...' : ''}</small>` : ''}
+                  <strong>${data.name || '이름없음'}</strong>
+                  ${data.notes ? `<br><small style="color: #666; font-size: 0.8rem;">💬 ${data.notes.substring(0, 30)}${data.notes.length > 30 ? '...' : ''}</small>` : ''}
               </div>
-              <div>${safeData.phone}</div>
-              <div>${safeData.date}<br><small>${safeData.time}</small></div>
+              <div>${data.phone || '연락처없음'}</div>
+              <div>${data.date || ''}<br><small>${data.time || ''}</small></div>
               <div style="font-size: 0.9rem; color: #666;">${services}</div>
               <div><span class="status-badge ${statusClass}">${statusText}</span></div>
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                  <select onchange="adminUpdateBookingStatus('${safeData.id}', this.value)" style="font-size: 0.9rem;">
+                  <select onchange="updateStatus('${data.id}', this.value)" style="font-size: 0.9rem;">
                       <option value="pending" ${status === 'pending' ? 'selected' : ''}>대기</option>
                       <option value="confirmed" ${status === 'confirmed' ? 'selected' : ''}>확정</option>
                       <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>취소</option>
                   </select>
-                  <button onclick="showBookingDetails('${safeData.id}', ${JSON.stringify(safeData).replace(/"/g, '&quot;')})" style="
-                      background: #3b82f6; 
-                      color: white; 
-                      border: none; 
-                      padding: 0.3rem 0.8rem; 
-                      border-radius: 5px; 
-                      cursor: pointer; 
-                      font-size: 0.8rem;
-                  ">상세</button>
-                  <button class="delete-btn" onclick="deleteBooking('${safeData.id}')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">삭제</button>
+                  <button class="delete-btn" onclick="deleteItem('bookings', '${data.id}')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">삭제</button>
               </div>
           `;
           bookingsList.appendChild(row);
       });
     }
 
-    async function loadGallery() {
+    async function loadGalleryData() {
+      if (isLoading) return;
+      isLoading = true;
+      
       const galleryList = document.getElementById('gallery-list');
-      if (!galleryList) return;
+      if (!galleryList) {
+          isLoading = false;
+          return;
+      }
       
       try {
-          let galleryData = getCachedData('gallery');
-          
-          if (!galleryData) {
-              galleryData = await window.loadGalleryImages();
-              setCachedData('gallery', galleryData);
-          }
-          
+          const galleryData = await window.loadGalleryImages();
           displayGallery(galleryData);
-          
       } catch (error) {
           console.error('갤러리 로드 실패:', error);
           galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
+      } finally {
+          isLoading = false;
       }
     }
 
@@ -685,7 +509,7 @@
       
       galleryList.innerHTML = '';
       
-      if (galleryData.length === 0) {
+      if (!Array.isArray(galleryData) || galleryData.length === 0) {
           galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">갤러리가 비어있습니다.</div>';
           return;
       }
@@ -705,7 +529,7 @@
                       <p>업로드: ${dateString}</p>
                   </div>
                   <div class="card-actions">
-                      <button class="delete-btn" onclick="deleteGalleryItem('${data.id}', '${data.image_url}')">삭제</button>
+                      <button class="delete-btn" onclick="deleteItem('gallery', '${data.id}')">삭제</button>
                   </div>
               </div>
           `;
@@ -713,26 +537,27 @@
       });
     }
 
-    async function loadReviews() {
+    async function loadReviewsData() {
+      if (isLoading) return;
+      isLoading = true;
+      
       const reviewsList = document.getElementById('reviews-list');
-      if (!reviewsList) return;
+      if (!reviewsList) {
+          isLoading = false;
+          return;
+      }
       
       try {
-          let reviewsData = getCachedData('reviews');
+          const sortSelect = document.getElementById('review-sort');
+          const sortValue = sortSelect ? sortSelect.value : 'newest';
           
-          if (!reviewsData) {
-              const sortSelect = document.getElementById('review-sort');
-              const sortValue = sortSelect ? sortSelect.value : 'newest';
-              
-              reviewsData = await window.loadReviews(sortValue, 100);
-              setCachedData('reviews', reviewsData);
-          }
-          
+          const reviewsData = await window.loadReviews(sortValue, 100);
           displayReviews(reviewsData);
-          
       } catch (error) {
           console.error('후기 로드 실패:', error);
           reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
+      } finally {
+          isLoading = false;
       }
     }
 
@@ -741,7 +566,7 @@
       
       reviewsList.innerHTML = '';
       
-      if (!reviewsData || !Array.isArray(reviewsData) || reviewsData.length === 0) {
+      if (!Array.isArray(reviewsData) || reviewsData.length === 0) {
           reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">후기가 없습니다.</div>';
           return;
       }
@@ -772,42 +597,12 @@
               <div class="review-content">${data.content || ''}</div>
               ${imageHtml}
               <div class="review-actions">
-                  <button class="delete-btn" onclick="deleteReview('${data.id}', '${data.image_url || ''}')">삭제</button>
+                  <button class="delete-btn" onclick="deleteItem('reviews', '${data.id}')">삭제</button>
               </div>
           `;
           reviewsList.appendChild(card);
       });
     }
-      
-      reviewsData.forEach(data => {
-          const card = document.createElement('div');
-          card.className = 'admin-review-card';
-          
-          const createdAt = new Date(data.created_at);
-          const dateString = createdAt.toLocaleDateString('ko-KR');
-          
-          const rating = data.rating || 5;
-          const starsDisplay = '⭐'.repeat(rating);
-          
-          const imageHtml = data.image_url ? 
-              `<div style="text-align: center; margin-top: 1rem;">
-                 <img src="${data.image_url}" alt="후기 사진" style="max-width: 200px; max-height: 150px; border-radius: 8px;" loading="lazy" />
-               </div>` : '';
-          
-          card.innerHTML = `
-              <div class="review-header">
-                  <span class="review-author">${data.name}</span>
-                  <span class="review-date">${dateString}</span>
-              </div>
-              <div style="margin: 1rem 0; font-size: 1.2rem;">${starsDisplay}</div>
-              <div class="review-content">${data.content}</div>
-              ${imageHtml}
-              <div class="review-actions">
-                  <button class="delete-btn" onclick="deleteReview('${data.id}', '${data.image_url || ''}')">삭제</button>
-              </div>
-          `;
-          reviewsList.appendChild(card);
-      });
 
     async function handleFileUpload(e) {
       e.preventDefault();
@@ -846,8 +641,7 @@
                   const uploadSection = document.getElementById('upload-section');
                   if (uploadSection) uploadSection.style.display = 'none';
                   
-                  clearCache('gallery');
-                  loadGallery();
+                  loadGalleryData();
                   loadDashboard();
               } catch (error) {
                   console.error('갤러리 저장 실패:', error);
@@ -862,56 +656,28 @@
       }
     }
 
-    window.adminUpdateBookingStatus = async function(docId, newStatus) {
+    window.updateStatus = async function(id, status) {
       try {
-          await window.updateBookingStatus(docId, newStatus);
+          await window.updateBookingStatus(id, status);
           window.showNotification('상태 업데이트 완료!', 'success');
-          clearCache('bookings');
-          loadBookings();
+          loadBookingsData();
       } catch (error) {
           console.error('상태 업데이트 실패:', error);
           window.showNotification('상태 업데이트 실패', 'error');
       }
     };
 
-    window.deleteBooking = async function(docId) {
+    window.deleteItem = async function(table, id) {
       if (!confirm('정말로 삭제하시겠습니까?')) return;
       
       try {
-          await window.deleteRecord('bookings', docId);
+          await window.deleteRecord(table, id);
           window.showNotification('삭제 완료!', 'success');
-          clearCache('bookings');
-          loadBookings();
-          loadDashboard();
-      } catch (error) {
-          console.error('삭제 실패:', error);
-          window.showNotification('삭제 실패', 'error');
-      }
-    };
-
-    window.deleteGalleryItem = async function(docId, imageUrl) {
-      if (!confirm('정말로 삭제하시겠습니까?')) return;
-      
-      try {
-          await window.deleteRecord('gallery', docId);
-          window.showNotification('삭제 완료!', 'success');
-          clearCache('gallery');
-          loadGallery();
-          loadDashboard();
-      } catch (error) {
-          console.error('삭제 실패:', error);
-          window.showNotification('삭제 실패', 'error');
-      }
-    };
-
-    window.deleteReview = async function(docId, imageUrl) {
-      if (!confirm('정말로 삭제하시겠습니까?')) return;
-      
-      try {
-          await window.deleteRecord('reviews', docId);
-          window.showNotification('삭제 완료!', 'success');
-          clearCache('reviews');
-          loadReviews();
+          
+          if (table === 'bookings') loadBookingsData();
+          else if (table === 'gallery') loadGalleryData();
+          else if (table === 'reviews') loadReviewsData();
+          
           loadDashboard();
       } catch (error) {
           console.error('삭제 실패:', error);
