@@ -27,7 +27,7 @@
       <div class="admin-nav">
         <button class="nav-btn active" data-tab="dashboard">📈 대시보드</button>
         <button class="nav-btn" data-tab="bookings">📅 예약 관리</button>
-        <button class="nav-btn" data-tab="gallery">🖼️ 갤러리 관리</button>
+        <button class="nav-btn" data-tab="gallery">🖼️ 메인 슬라이더 관리</button>
         <button class="nav-btn" data-tab="reviews">💬 후기 관리</button>
         <button class="nav-btn logout" id="logout-btn">🚪 로그아웃</button>
       </div>
@@ -46,7 +46,7 @@
           <div class="stats-icon">🖼️</div>
           <div class="stats-info">
             <h3 id="total-gallery">0</h3>
-            <p>갤러리 이미지</p>
+            <p>메인 슬라이더 이미지</p>
           </div>
         </div>
         <div class="stats-card">
@@ -90,7 +90,7 @@
 
     <section id="gallery-tab" class="tab-content">
       <div class="section-header">
-        <h2>🖼️ 갤러리 관리</h2>
+        <h2>🖼️ 메인 슬라이더 관리</h2>
         <button id="upload-toggle" class="primary-btn">➕ 새 이미지 업로드</button>
       </div>
       
@@ -131,7 +131,6 @@
   </main>
 
   <script type="module">
-    // 2025년 최신 Firebase 연결 - 예쁜 디자인 버전
     let isLoggedIn = false;
     let firebaseLoaded = false;
     let db, storage;
@@ -142,13 +141,10 @@
     };
     const CACHE_DURATION = 2 * 60 * 1000;
 
-    // Firebase 2025 최신 방식으로 초기화
     async function loadFirebase() {
       if (firebaseLoaded) return;
 
       try {
-        console.log('🔥 Firebase 2025 최신 방식으로 초기화 중...');
-        
         const [
           { initializeApp },
           { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp, where },
@@ -163,7 +159,7 @@
           apiKey: "AIzaSyBGvgFrFl1DWpkgqbwRo-TUwJa6quvohmA",
           authDomain: "nekorunail.firebaseapp.com",
           projectId: "nekorunail",
-          storageBucket: "nekorunail.appspot.com", // 수정된 Storage URL
+          storageBucket: "nekorunail.appspot.com",
           messagingSenderId: "571846382457",
           appId: "1:571846382457:web:6c0f66ca63163473fd15a8",
           measurementId: "G-MW8CBHGSLG"
@@ -173,9 +169,6 @@
         db = getFirestore(app);
         storage = getStorage(app);
 
-        // 전역 함수 등록
-        window.db = db;
-        window.storage = storage;
         window.fbCollection = collection;
         window.fbAddDoc = addDoc;
         window.fbGetDocs = getDocs;
@@ -192,52 +185,14 @@
         window.fbDeleteObject = deleteObject;
 
         firebaseLoaded = true;
-        console.log('✅ Firebase 2025 초기화 완료!');
-        showNotification('🔥 Firebase 연결 성공!', 'success');
-        
-        // 연결 테스트
-        await testFirebaseConnection();
-        
+        console.log('Firebase 초기화 완료');
       } catch (error) {
-        console.error('❌ Firebase 초기화 실패:', error);
-        showNotification(`Firebase 연결 실패: ${error.message}`, 'error');
+        console.error('Firebase 로드 실패:', error);
+        showNotification('Firebase 연결 실패', 'error');
         throw error;
       }
     }
 
-    // Firebase 연결 테스트
-    async function testFirebaseConnection() {
-      try {
-        // Firestore 테스트
-        const testDoc = await window.fbAddDoc(window.fbCollection(db, "test"), {
-          message: "Firebase 2025 연결 테스트",
-          timestamp: window.fbServerTimestamp()
-        });
-        
-        // 테스트 문서 즉시 삭제
-        await window.fbDeleteDoc(window.fbDoc(db, "test", testDoc.id));
-        
-        console.log('✅ Firestore 연결 테스트 성공');
-        
-        // Storage 테스트
-        const testBlob = new Blob(['Storage 테스트'], { type: 'text/plain' });
-        const testRef = window.fbRef(storage, 'test/connection-test.txt');
-        await window.fbUploadBytes(testRef, testBlob);
-        const downloadURL = await window.fbGetDownloadURL(testRef);
-        await window.fbDeleteObject(testRef);
-        
-        console.log('✅ Storage 연결 테스트 성공');
-        showNotification('🎉 모든 Firebase 서비스 정상 작동!', 'success');
-        
-        return true;
-      } catch (error) {
-        console.error('❌ Firebase 연결 테스트 실패:', error);
-        showNotification('⚠️ Firebase 연결에 문제가 있습니다', 'warning');
-        return false;
-      }
-    }
-
-    // 캐시 관리
     function getCachedData(type) {
       const cached = dataCache[type];
       if (cached.data && (Date.now() - cached.timestamp < CACHE_DURATION)) {
@@ -263,7 +218,6 @@
       }
     }
 
-    // 예약 상세 정보 모달
     window.showBookingDetails = function(docId, bookingData) {
       const services = Array.isArray(bookingData.services) ? bookingData.services.join(', ') : (bookingData.services || '기본 케어');
       const notes = bookingData.notes || '특이사항 없음';
@@ -364,6 +318,14 @@
       
       document.body.appendChild(modal);
       
+      const escHandler = function(e) {
+          if (e.key === 'Escape') {
+              closeBookingModal();
+              document.removeEventListener('keydown', escHandler);
+          }
+      };
+      document.addEventListener('keydown', escHandler);
+      
       modal.addEventListener('click', function(e) {
           if (e.target === modal) {
               closeBookingModal();
@@ -378,350 +340,6 @@
       }
     };
 
-    // 대시보드 로드
-    async function loadDashboard() {
-      try {
-          const cachedBookings = getCachedData('bookings');
-          const cachedGallery = getCachedData('gallery');
-          const cachedReviews = getCachedData('reviews');
-
-          if (cachedBookings && cachedGallery && cachedReviews) {
-              updateDashboardStats(cachedBookings, cachedGallery, cachedReviews);
-              loadRecentBookings(cachedBookings);
-              showNotification('📊 캐시된 데이터로 업데이트됨!', 'success');
-              return;
-          }
-
-          await loadFirebase();
-          
-          const [bookingsSnapshot, gallerySnapshot, reviewsSnapshot] = await Promise.all([
-              window.fbGetDocs(window.fbCollection(db, "bookings")),
-              window.fbGetDocs(window.fbCollection(db, "gallery")),
-              window.fbGetDocs(window.fbCollection(db, "reviews"))
-          ]);
-          
-          const bookingsData = [];
-          const galleryData = [];
-          const reviewsData = [];
-          
-          bookingsSnapshot.forEach(doc => bookingsData.push({ id: doc.id, ...doc.data() }));
-          gallerySnapshot.forEach(doc => galleryData.push({ id: doc.id, ...doc.data() }));
-          reviewsSnapshot.forEach(doc => reviewsData.push({ id: doc.id, ...doc.data() }));
-          
-          setCachedData('bookings', bookingsData);
-          setCachedData('gallery', galleryData);
-          setCachedData('reviews', reviewsData);
-          
-          updateDashboardStats(bookingsData, galleryData, reviewsData);
-          loadRecentBookings(bookingsData);
-          
-          showNotification('📊 실시간 데이터로 업데이트됨!', 'success');
-      } catch (error) {
-          console.error('대시보드 로드 실패:', error);
-          showNotification('대시보드 로드 실패', 'error');
-      }
-    }
-
-    function updateDashboardStats(bookingsData, galleryData, reviewsData) {
-      const today = new Date().toISOString().split('T')[0];
-      const todayBookingsCount = bookingsData.filter(booking => booking.date === today).length;
-      
-      const stats = {
-          'total-bookings': bookingsData.length,
-          'total-gallery': galleryData.length,
-          'total-reviews': reviewsData.length,
-          'today-bookings': todayBookingsCount
-      };
-      
-      Object.entries(stats).forEach(([id, value]) => {
-          const element = document.getElementById(id);
-          if (element) element.textContent = value;
-      });
-    }
-
-    function loadRecentBookings(bookingsData) {
-      const recentBookings = document.getElementById('recent-bookings');
-      if (!recentBookings) return;
-      
-      const sortedBookings = bookingsData
-          .sort((a, b) => {
-              const aTime = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-              const bTime = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-              return bTime - aTime;
-          })
-          .slice(0, 5);
-      
-      recentBookings.innerHTML = '';
-      
-      if (sortedBookings.length === 0) {
-          recentBookings.innerHTML = '<p style="text-align: center; color: #718096;">최근 예약이 없습니다.</p>';
-          return;
-      }
-      
-      sortedBookings.forEach(data => {
-          const item = document.createElement('div');
-          item.className = 'recent-item';
-          
-          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
-          const timeString = createdAt.toLocaleDateString('ko-KR');
-          
-          item.innerHTML = `
-              <div class="recent-item-header">
-                  <span class="recent-item-name">${data.name}</span>
-                  <span class="recent-item-time">${timeString}</span>
-              </div>
-              <div class="recent-item-details">
-                  📅 ${data.date} ${data.time} | 📞 ${data.phone}
-              </div>
-          `;
-          recentBookings.appendChild(item);
-      });
-    }
-
-    // 갤러리 로드
-    async function loadGallery() {
-      const galleryList = document.getElementById('gallery-list');
-      if (!galleryList) return;
-      
-      try {
-          let galleryData = getCachedData('gallery');
-          
-          if (!galleryData) {
-              await loadFirebase();
-              const q = window.fbQuery(window.fbCollection(db, "gallery"), window.fbOrderBy("createdAt", "desc"));
-              const snapshot = await window.fbGetDocs(q);
-              
-              galleryData = [];
-              snapshot.forEach(doc => {
-                  galleryData.push({ id: doc.id, ...doc.data() });
-              });
-              
-              setCachedData('gallery', galleryData);
-          }
-          
-          displayGallery(galleryData);
-          
-      } catch (error) {
-          console.error('갤러리 로드 실패:', error);
-          galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
-      }
-    }
-
-    function displayGallery(galleryData) {
-      const galleryList = document.getElementById('gallery-list');
-      
-      galleryList.innerHTML = '';
-      
-      if (galleryData.length === 0) {
-          galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">갤러리가 비어있습니다.</div>';
-          return;
-      }
-      
-      galleryData.forEach(data => {
-          const card = document.createElement('div');
-          card.className = 'admin-gallery-card';
-          
-          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
-          const dateString = createdAt.toLocaleDateString('ko-KR');
-          
-          card.innerHTML = `
-              <img src="${data.imageUrl}" alt="갤러리 이미지" loading="lazy" />
-              <div class="card-content">
-                  <div class="card-info">
-                      <h4>${data.caption || '무제'}</h4>
-                      <p>업로드: ${dateString}</p>
-                  </div>
-                  <div class="card-actions">
-                      <button class="delete-btn" onclick="deleteGalleryItem('${data.id}', '${data.imageUrl}')">삭제</button>
-                  </div>
-              </div>
-          `;
-          galleryList.appendChild(card);
-      });
-    }
-
-    // 예약 관리
-    async function loadBookings() {
-      const bookingsList = document.getElementById('bookings-list');
-      if (!bookingsList) return;
-      
-      try {
-          let bookingsData = getCachedData('bookings');
-          
-          if (!bookingsData) {
-              await loadFirebase();
-              const q = window.fbQuery(window.fbCollection(db, "bookings"), window.fbOrderBy("createdAt", "desc"));
-              const snapshot = await window.fbGetDocs(q);
-              
-              bookingsData = [];
-              snapshot.forEach(doc => {
-                  bookingsData.push({ id: doc.id, ...doc.data() });
-              });
-              
-              setCachedData('bookings', bookingsData);
-          }
-          
-          displayBookings(bookingsData);
-          
-      } catch (error) {
-          console.error('예약 로드 실패:', error);
-          bookingsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
-      }
-    }
-
-    function displayBookings(bookingsData) {
-      const bookingsList = document.getElementById('bookings-list');
-      
-      bookingsList.innerHTML = `
-          <div class="data-row data-header" style="grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto;">
-              <div><strong>이름</strong></div>
-              <div><strong>연락처</strong></div>
-              <div><strong>예약일시</strong></div>
-              <div><strong>서비스</strong></div>
-              <div><strong>상태</strong></div>
-              <div><strong>작업</strong></div>
-          </div>
-      `;
-      
-      if (bookingsData.length === 0) {
-          bookingsList.innerHTML += '<div style="text-align: center; padding: 2rem; color: #718096;">예약이 없습니다.</div>';
-          return;
-      }
-      
-      bookingsData.forEach(data => {
-          const row = document.createElement('div');
-          row.className = 'data-row';
-          row.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 1fr auto';
-          
-          const status = data.status || 'pending';
-          const statusClass = `status-${status}`;
-          const statusText = status === 'confirmed' ? '확정' : status === 'cancelled' ? '취소' : '대기';
-          
-          const services = Array.isArray(data.services) ? data.services.join(', ') : (data.services || '기본 케어');
-          
-          row.innerHTML = `
-              <div>
-                  <strong>${data.name}</strong>
-                  ${data.notes ? `<br><small style="color: #666; font-size: 0.8rem;">💬 ${data.notes.substring(0, 30)}${data.notes.length > 30 ? '...' : ''}</small>` : ''}
-              </div>
-              <div>${data.phone}</div>
-              <div>${data.date}<br><small>${data.time}</small></div>
-              <div style="font-size: 0.9rem; color: #666;">${services}</div>
-              <div><span class="status-badge ${statusClass}">${statusText}</span></div>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                  <select onchange="updateBookingStatus('${data.id}', this.value)" style="font-size: 0.9rem;">
-                      <option value="pending" ${status === 'pending' ? 'selected' : ''}>대기</option>
-                      <option value="confirmed" ${status === 'confirmed' ? 'selected' : ''}>확정</option>
-                      <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>취소</option>
-                  </select>
-                  <button onclick="showBookingDetails('${data.id}', ${JSON.stringify(data).replace(/"/g, '&quot;')})" style="
-                      background: #3b82f6; 
-                      color: white; 
-                      border: none; 
-                      padding: 0.3rem 0.8rem; 
-                      border-radius: 5px; 
-                      cursor: pointer; 
-                      font-size: 0.8rem;
-                  ">상세</button>
-                  <button class="delete-btn" onclick="deleteBooking('${data.id}')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">삭제</button>
-              </div>
-          `;
-          bookingsList.appendChild(row);
-      });
-    }
-
-    // 후기 로드
-    async function loadReviews() {
-      const reviewsList = document.getElementById('reviews-list');
-      if (!reviewsList) return;
-      
-      try {
-          let reviewsData = getCachedData('reviews');
-          
-          if (!reviewsData) {
-              await loadFirebase();
-              
-              const sortSelect = document.getElementById('review-sort');
-              const sortValue = sortSelect ? sortSelect.value : 'newest';
-              
-              let orderField = 'createdAt';
-              let orderDirection = 'desc';
-              
-              switch (sortValue) {
-                  case 'oldest':
-                      orderDirection = 'asc';
-                      break;
-                  case 'highest':
-                      orderField = 'rating';
-                      orderDirection = 'desc';
-                      break;
-                  case 'lowest':
-                      orderField = 'rating';
-                      orderDirection = 'asc';
-                      break;
-              }
-              
-              const q = window.fbQuery(window.fbCollection(db, "reviews"), window.fbOrderBy(orderField, orderDirection));
-              const snapshot = await window.fbGetDocs(q);
-              
-              reviewsData = [];
-              snapshot.forEach(doc => {
-                  reviewsData.push({ id: doc.id, ...doc.data() });
-              });
-              
-              setCachedData('reviews', reviewsData);
-          }
-          
-          displayReviews(reviewsData);
-          
-      } catch (error) {
-          console.error('후기 로드 실패:', error);
-          reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
-      }
-    }
-
-    function displayReviews(reviewsData) {
-      const reviewsList = document.getElementById('reviews-list');
-      
-      reviewsList.innerHTML = '';
-      
-      if (reviewsData.length === 0) {
-          reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">후기가 없습니다.</div>';
-          return;
-      }
-      
-      reviewsData.forEach(data => {
-          const card = document.createElement('div');
-          card.className = 'admin-review-card';
-          
-          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
-          const dateString = createdAt.toLocaleDateString('ko-KR');
-          
-          const rating = data.rating || 5;
-          const starsDisplay = '⭐'.repeat(rating);
-          
-          const imageHtml = data.imageUrl ? 
-              `<div style="text-align: center; margin-top: 1rem;">
-                 <img src="${data.imageUrl}" alt="후기 사진" style="max-width: 200px; max-height: 150px; border-radius: 8px;" loading="lazy" />
-               </div>` : '';
-          
-          card.innerHTML = `
-              <div class="review-header">
-                  <span class="review-author">${data.name}</span>
-                  <span class="review-date">${dateString}</span>
-              </div>
-              <div style="margin: 1rem 0; font-size: 1.2rem;">${starsDisplay}</div>
-              <div class="review-content">${data.content}</div>
-              ${imageHtml}
-              <div class="review-actions">
-                  <button class="delete-btn" onclick="deleteReview('${data.id}', '${data.imageUrl || ''}')">삭제</button>
-              </div>
-          `;
-          reviewsList.appendChild(card);
-      });
-    }
-
-    // 관리자 초기화
     function initializeAdmin() {
       const loginOverlay = document.getElementById('login-overlay');
       const adminPanel = document.getElementById('admin-panel');
@@ -729,15 +347,28 @@
       const adminPass = document.getElementById('admin-pass');
       const logoutBtn = document.getElementById('logout-btn');
       
-      // 로그인 상태 확인
+      if (!loginOverlay || !adminPanel || !loginBtn || !adminPass) {
+          console.error('필수 요소를 찾을 수 없습니다');
+          return;
+      }
+      
+      checkLoginStatus(loginOverlay, adminPanel);
+      setupEvents(loginBtn, adminPass, logoutBtn, loginOverlay, adminPanel);
+    }
+
+    function checkLoginStatus(loginOverlay, adminPanel) {
       const savedLogin = sessionStorage.getItem('admin_logged_in');
+      
       if (savedLogin === 'true') {
           isLoggedIn = true;
           showAdminPanel(loginOverlay, adminPanel);
           loadDashboard();
+      } else {
+          showLoginScreen(loginOverlay, adminPanel);
       }
+    }
 
-      // 이벤트 리스너
+    function setupEvents(loginBtn, adminPass, logoutBtn, loginOverlay, adminPanel) {
       if (loginBtn) {
           loginBtn.onclick = function(e) {
               e.preventDefault();
@@ -761,16 +392,22 @@
           };
       }
       
-      // 네비게이션
+      setupNavigation();
+      setupOtherEvents();
+    }
+
+    function setupNavigation() {
       const navBtns = document.querySelectorAll('.nav-btn:not(.logout)');
+      
       navBtns.forEach(function(btn) {
           btn.onclick = function() {
               const tab = btn.dataset.tab;
               switchTab(tab);
           };
       });
+    }
 
-      // 갤러리 업로드 이벤트
+    function setupOtherEvents() {
       const uploadToggle = document.getElementById('upload-toggle');
       const uploadSection = document.getElementById('upload-section');
       const cancelUpload = document.getElementById('cancel-upload');
@@ -793,8 +430,7 @@
       if (uploadForm) {
           uploadForm.addEventListener('submit', handleFileUpload);
       }
-
-      // 새로고침 버튼
+      
       const refreshBookings = document.getElementById('refresh-bookings');
       if (refreshBookings) {
           refreshBookings.onclick = () => {
@@ -803,7 +439,6 @@
           };
       }
       
-      // 필터 이벤트
       const dateFilter = document.getElementById('date-filter');
       const statusFilter = document.getElementById('status-filter');
       const reviewSort = document.getElementById('review-sort');
@@ -899,7 +534,345 @@
       }
     }
 
-    // 파일 업로드 처리
+    async function loadDashboard() {
+      try {
+          const cachedBookings = getCachedData('bookings');
+          const cachedGallery = getCachedData('gallery');
+          const cachedReviews = getCachedData('reviews');
+
+          if (cachedBookings && cachedGallery && cachedReviews) {
+              updateDashboardStats(cachedBookings, cachedGallery, cachedReviews);
+              loadRecentBookings(cachedBookings);
+              showNotification('📊 캐시된 데이터로 업데이트됨!', 'success');
+              return;
+          }
+
+          await loadFirebase();
+          
+          const [bookingsSnapshot, gallerySnapshot, reviewsSnapshot] = await Promise.all([
+              window.fbGetDocs(window.fbCollection(db, "bookings")),
+              window.fbGetDocs(window.fbCollection(db, "gallery")),
+              window.fbGetDocs(window.fbCollection(db, "reviews"))
+          ]);
+          
+          const bookingsData = [];
+          const galleryData = [];
+          const reviewsData = [];
+          
+          bookingsSnapshot.forEach(doc => bookingsData.push({ id: doc.id, ...doc.data() }));
+          gallerySnapshot.forEach(doc => galleryData.push({ id: doc.id, ...doc.data() }));
+          reviewsSnapshot.forEach(doc => reviewsData.push({ id: doc.id, ...doc.data() }));
+          
+          setCachedData('bookings', bookingsData);
+          setCachedData('gallery', galleryData);
+          setCachedData('reviews', reviewsData);
+          
+          updateDashboardStats(bookingsData, galleryData, reviewsData);
+          loadRecentBookings(bookingsData);
+          
+          showNotification('📊 Firebase 데이터로 업데이트됨!', 'success');
+      } catch (error) {
+          console.error('대시보드 로드 실패:', error);
+          showNotification('대시보드 로드 실패', 'error');
+      }
+    }
+
+    function updateDashboardStats(bookingsData, galleryData, reviewsData) {
+      const today = new Date().toISOString().split('T')[0];
+      const todayBookingsCount = bookingsData.filter(booking => booking.date === today).length;
+      
+      const stats = {
+          'total-bookings': bookingsData.length,
+          'total-gallery': galleryData.length,
+          'total-reviews': reviewsData.length,
+          'today-bookings': todayBookingsCount
+      };
+      
+      Object.entries(stats).forEach(([id, value]) => {
+          const element = document.getElementById(id);
+          if (element) element.textContent = value;
+      });
+    }
+
+    function loadRecentBookings(bookingsData) {
+      const recentBookings = document.getElementById('recent-bookings');
+      if (!recentBookings) return;
+      
+      const sortedBookings = bookingsData
+          .sort((a, b) => {
+              const aTime = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+              const bTime = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+              return bTime - aTime;
+          })
+          .slice(0, 5);
+      
+      recentBookings.innerHTML = '';
+      
+      if (sortedBookings.length === 0) {
+          recentBookings.innerHTML = '<p style="text-align: center; color: #718096;">최근 예약이 없습니다.</p>';
+          return;
+      }
+      
+      sortedBookings.forEach(data => {
+          const item = document.createElement('div');
+          item.className = 'recent-item';
+          
+          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const timeString = createdAt.toLocaleDateString('ko-KR');
+          
+          item.innerHTML = `
+              <div class="recent-item-header">
+                  <span class="recent-item-name">${data.name}</span>
+                  <span class="recent-item-time">${timeString}</span>
+              </div>
+              <div class="recent-item-details">
+                  📅 ${data.date} ${data.time} | 📞 ${data.phone}
+              </div>
+          `;
+          recentBookings.appendChild(item);
+      });
+    }
+
+    async function loadBookings() {
+      const bookingsList = document.getElementById('bookings-list');
+      if (!bookingsList) return;
+      
+      try {
+          let bookingsData = getCachedData('bookings');
+          
+          if (!bookingsData) {
+              await loadFirebase();
+              const q = window.fbQuery(window.fbCollection(db, "bookings"), window.fbOrderBy("createdAt", "desc"));
+              const snapshot = await window.fbGetDocs(q);
+              
+              bookingsData = [];
+              snapshot.forEach(doc => {
+                  bookingsData.push({ id: doc.id, ...doc.data() });
+              });
+              
+              setCachedData('bookings', bookingsData);
+          }
+          
+          displayBookings(bookingsData);
+          
+      } catch (error) {
+          console.error('예약 로드 실패:', error);
+          bookingsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
+      }
+    }
+
+    function displayBookings(bookingsData) {
+      const bookingsList = document.getElementById('bookings-list');
+      
+      bookingsList.innerHTML = `
+          <div class="data-row data-header" style="grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto;">
+              <div><strong>이름</strong></div>
+              <div><strong>연락처</strong></div>
+              <div><strong>예약일시</strong></div>
+              <div><strong>서비스</strong></div>
+              <div><strong>상태</strong></div>
+              <div><strong>작업</strong></div>
+          </div>
+      `;
+      
+      if (bookingsData.length === 0) {
+          bookingsList.innerHTML += '<div style="text-align: center; padding: 2rem; color: #718096;">예약이 없습니다.</div>';
+          return;
+      }
+      
+      bookingsData.forEach(data => {
+          const row = document.createElement('div');
+          row.className = 'data-row';
+          row.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 1fr auto';
+          
+          const status = data.status || 'pending';
+          const statusClass = `status-${status}`;
+          const statusText = status === 'confirmed' ? '확정' : status === 'cancelled' ? '취소' : '대기';
+          
+          const services = Array.isArray(data.services) ? data.services.join(', ') : (data.services || '기본 케어');
+          
+          row.innerHTML = `
+              <div>
+                  <strong>${data.name}</strong>
+                  ${data.notes ? `<br><small style="color: #666; font-size: 0.8rem;">💬 ${data.notes.substring(0, 30)}${data.notes.length > 30 ? '...' : ''}</small>` : ''}
+              </div>
+              <div>${data.phone}</div>
+              <div>${data.date}<br><small>${data.time}</small></div>
+              <div style="font-size: 0.9rem; color: #666;">${services}</div>
+              <div><span class="status-badge ${statusClass}">${statusText}</span></div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <select onchange="updateBookingStatus('${data.id}', this.value)" style="font-size: 0.9rem;">
+                      <option value="pending" ${status === 'pending' ? 'selected' : ''}>대기</option>
+                      <option value="confirmed" ${status === 'confirmed' ? 'selected' : ''}>확정</option>
+                      <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>취소</option>
+                  </select>
+                  <button onclick="showBookingDetails('${data.id}', ${JSON.stringify(data).replace(/"/g, '&quot;')})" style="
+                      background: #3b82f6; 
+                      color: white; 
+                      border: none; 
+                      padding: 0.3rem 0.8rem; 
+                      border-radius: 5px; 
+                      cursor: pointer; 
+                      font-size: 0.8rem;
+                  ">상세</button>
+                  <button class="delete-btn" onclick="deleteBooking('${data.id}')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">삭제</button>
+              </div>
+          `;
+          bookingsList.appendChild(row);
+      });
+    }
+
+    async function loadGallery() {
+      const galleryList = document.getElementById('gallery-list');
+      if (!galleryList) return;
+      
+      try {
+          let galleryData = getCachedData('gallery');
+          
+          if (!galleryData) {
+              await loadFirebase();
+              const q = window.fbQuery(window.fbCollection(db, "gallery"), window.fbOrderBy("createdAt", "desc"));
+              const snapshot = await window.fbGetDocs(q);
+              
+              galleryData = [];
+              snapshot.forEach(doc => {
+                  galleryData.push({ id: doc.id, ...doc.data() });
+              });
+              
+              setCachedData('gallery', galleryData);
+          }
+          
+          displayGallery(galleryData);
+          
+      } catch (error) {
+          console.error('갤러리 로드 실패:', error);
+          galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
+      }
+    }
+
+    function displayGallery(galleryData) {
+      const galleryList = document.getElementById('gallery-list');
+      
+      galleryList.innerHTML = '';
+      
+      if (galleryData.length === 0) {
+          galleryList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">갤러리가 비어있습니다.</div>';
+          return;
+      }
+      
+      galleryData.forEach(data => {
+          const card = document.createElement('div');
+          card.className = 'admin-gallery-card';
+          
+          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const dateString = createdAt.toLocaleDateString('ko-KR');
+          
+          card.innerHTML = `
+              <img src="${data.imageUrl}" alt="갤러리 이미지" loading="lazy" />
+              <div class="card-content">
+                  <div class="card-info">
+                      <h4>${data.caption || '무제'}</h4>
+                      <p>업로드: ${dateString}</p>
+                  </div>
+                  <div class="card-actions">
+                      <button class="delete-btn" onclick="deleteGalleryItem('${data.id}', '${data.imageUrl}')">삭제</button>
+                  </div>
+              </div>
+          `;
+          galleryList.appendChild(card);
+      });
+    }
+
+    async function loadReviews() {
+      const reviewsList = document.getElementById('reviews-list');
+      if (!reviewsList) return;
+      
+      try {
+          let reviewsData = getCachedData('reviews');
+          
+          if (!reviewsData) {
+              await loadFirebase();
+              
+              const sortSelect = document.getElementById('review-sort');
+              const sortValue = sortSelect ? sortSelect.value : 'newest';
+              
+              let orderField = 'createdAt';
+              let orderDirection = 'desc';
+              
+              switch (sortValue) {
+                  case 'oldest':
+                      orderDirection = 'asc';
+                      break;
+                  case 'highest':
+                      orderField = 'rating';
+                      orderDirection = 'desc';
+                      break;
+                  case 'lowest':
+                      orderField = 'rating';
+                      orderDirection = 'asc';
+                      break;
+              }
+              
+              const q = window.fbQuery(window.fbCollection(db, "reviews"), window.fbOrderBy(orderField, orderDirection));
+              const snapshot = await window.fbGetDocs(q);
+              
+              reviewsData = [];
+              snapshot.forEach(doc => {
+                  reviewsData.push({ id: doc.id, ...doc.data() });
+              });
+              
+              setCachedData('reviews', reviewsData);
+          }
+          
+          displayReviews(reviewsData);
+          
+      } catch (error) {
+          console.error('후기 로드 실패:', error);
+          reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">로드 실패</div>';
+      }
+    }
+
+    function displayReviews(reviewsData) {
+      const reviewsList = document.getElementById('reviews-list');
+      
+      reviewsList.innerHTML = '';
+      
+      if (reviewsData.length === 0) {
+          reviewsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #718096;">후기가 없습니다.</div>';
+          return;
+      }
+      
+      reviewsData.forEach(data => {
+          const card = document.createElement('div');
+          card.className = 'admin-review-card';
+          
+          const createdAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+          const dateString = createdAt.toLocaleDateString('ko-KR');
+          
+          const rating = data.rating || 5;
+          const starsDisplay = '⭐'.repeat(rating);
+          
+          const imageHtml = data.imageUrl ? 
+              `<div style="text-align: center; margin-top: 1rem;">
+                 <img src="${data.imageUrl}" alt="후기 사진" style="max-width: 200px; max-height: 150px; border-radius: 8px;" loading="lazy" />
+               </div>` : '';
+          
+          card.innerHTML = `
+              <div class="review-header">
+                  <span class="review-author">${data.name}</span>
+                  <span class="review-date">${dateString}</span>
+              </div>
+              <div style="margin: 1rem 0; font-size: 1.2rem;">${starsDisplay}</div>
+              <div class="review-content">${data.content}</div>
+              ${imageHtml}
+              <div class="review-actions">
+                  <button class="delete-btn" onclick="deleteReview('${data.id}', '${data.imageUrl || ''}')">삭제</button>
+              </div>
+          `;
+          reviewsList.appendChild(card);
+      });
+    }
+
     async function handleFileUpload(e) {
       e.preventDefault();
       
@@ -951,7 +924,6 @@
       }
     }
 
-    // 삭제 및 업데이트 함수들
     window.updateBookingStatus = async function(docId, newStatus) {
       try {
           await loadFirebase();
@@ -1035,7 +1007,6 @@
       }
     };
 
-    // 알림 시스템
     function showNotification(message, type = 'success') {
       const existing = document.querySelector('.notification');
       if (existing) existing.remove();
@@ -1084,12 +1055,11 @@
       });
     }
 
-    // 페이지 로드시 초기화
     document.addEventListener('DOMContentLoaded', function() {
       initializeAdmin();
     });
 
-    console.log('🎉 예쁜 디자인 + 작동하는 Firebase 2025 솔루션 로드 완료!');
+    console.log('관리자 스크립트 로드 완료');
   </script>
 </body>
 </html>

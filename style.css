@@ -923,6 +923,11 @@ input:focus, textarea:focus, select:focus {
   color: #ffffff;
 }
 
+a {
+  text-decoration: none;
+  color: black;
+}
+
 @media (max-width: 768px) {
   header.hero {
     padding: 2rem 1rem;
